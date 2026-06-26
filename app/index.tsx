@@ -1,11 +1,11 @@
  import React from 'react';
 import {
-    Image,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { router } from 'expo-router';
@@ -32,6 +32,7 @@ export default function WelcomeScreen() {
           Comedor Digital
         </Text>
 
+        {/*comentario*/ }
         <Text style={styles.subtitle}>
           Atencingo
         </Text>
