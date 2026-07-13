@@ -1,92 +1,91 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Image,
-  StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 
-import { router } from 'expo-router';
+import PrimaryButton from '../../components/buttons/PrimaryButton';
+import CustomInput from '../../components/inputs/CustomInput';
 import { COLORS } from '../../constants/colors';
 
-export default function LoginScreen() {
-  const [correo, setCorreo] = useState('');
-  const [password, setPassword] = useState('');
+export default function Login() {
+  const [remember, setRemember] = useState(false);
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor={COLORS.background}
-      />
-
-      {/* Curva superior */}
-      <View style={styles.topWave} />
+      {/* Regresar */}
+      <TouchableOpacity
+        onPress={() => router.back()}
+      >
+        <Ionicons
+          name="arrow-back"
+          size={30}
+          color={COLORS.text}
+        />
+      </TouchableOpacity>
 
       {/* Logo */}
-      <Image
-        source={require('../../assets/images/zucarmex-logo.png')}
-        style={styles.logo}
-        resizeMode="contain"
-      />
+      <Text style={styles.logo}>
+        ZUCARMEX
+      </Text>
 
-      {/* Títulos */}
       <Text style={styles.title}>
         Comedor Digital
       </Text>
 
       <Text style={styles.subtitle}>
-        Bienvenido de nuevo
+        Inicia sesión para continuar
       </Text>
 
-      {/* Formulario */}
-      <View style={styles.form}>
-        <TextInput
-          placeholder="Correo electrónico"
-          placeholderTextColor={COLORS.gray}
-          style={styles.input}
-          value={correo}
-          onChangeText={setCorreo}
-          keyboardType="email-address"
-        />
+      {/* Campos */}
+      <CustomInput
+        placeholder="Usuario"
+      />
 
-        <TextInput
-          placeholder="Contraseña"
-          placeholderTextColor={COLORS.gray}
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+      <CustomInput
+        placeholder="Contraseña"
+        secureTextEntry
+      />
+
+      {/* Recordarme */}
+      <View style={styles.options}>
+        <TouchableOpacity
+          style={styles.rememberContainer}
+          onPress={() =>
+            setRemember(!remember)
+          }
+        >
+          <Ionicons
+            name={
+              remember
+                ? 'checkbox'
+                : 'square-outline'
+            }
+            size={24}
+            color={COLORS.primary}
+          />
+
+          <Text style={styles.rememberText}>
+            Recordarme
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity>
           <Text style={styles.forgot}>
             ¿Olvidaste tu contraseña?
           </Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() =>
-            router.replace('/dashboard')
-          }
-        >
-          <Text style={styles.buttonText}>
-            Iniciar sesión
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => router.back()}
-        >
-          <Text style={styles.back}>
-            ← Regresar
-          </Text>
-        </TouchableOpacity>
       </View>
+
+      {/* Botón */}
+      <PrimaryButton
+        title="Ingresar"
+        onPress={() => {}}
+      />
     </View>
   );
 }
@@ -95,97 +94,50 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    alignItems: 'center',
-    paddingHorizontal: 30,
-  },
-
-  topWave: {
-    position: 'absolute',
-    top: -180,
-    width: 500,
-    height: 300,
-    backgroundColor: '#E8F5E9',
-    borderBottomLeftRadius: 250,
-    borderBottomRightRadius: 250,
+    padding: 25,
+    justifyContent: 'center',
   },
 
   logo: {
-    width: 250,
-    height: 90,
-    marginTop: 80,
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    textAlign: 'center',
+    marginTop: 20,
   },
 
   title: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: COLORS.primary,
-    marginTop: 15,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginTop: 10,
   },
 
   subtitle: {
-    fontSize: 18,
-    color: COLORS.gray,
-    marginTop: 10,
-    marginBottom: 40,
-  },
-
-  form: {
-    width: '100%',
-  },
-
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    marginBottom: 18,
     fontSize: 16,
+    color: COLORS.gray,
+    textAlign: 'center',
+    marginBottom: 50,
+  },
 
-    elevation: 4,
+  options: {
+    marginBottom: 30,
+  },
 
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+  rememberContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+
+  rememberText: {
+    marginLeft: 10,
+    color: COLORS.text,
   },
 
   forgot: {
     color: COLORS.primary,
-    textAlign: 'right',
-    marginBottom: 30,
     fontWeight: '600',
-  },
-
-  button: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 18,
-    borderRadius: 20,
-    alignItems: 'center',
-
-    elevation: 8,
-
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-
-  back: {
-    textAlign: 'center',
-    marginTop: 25,
-    color: COLORS.gray,
-    fontSize: 16,
   },
 });
