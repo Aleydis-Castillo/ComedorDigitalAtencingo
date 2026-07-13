@@ -1,17 +1,20 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import { OrderProvider } from '../context/OrderContext';
+
 export default function RootLayout() {
   return (
-    <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="auth/login" />
-        <Stack.Screen name="auth/register" />
-        <Stack.Screen name="dashboard/index" />
-      </Stack>
+    <OrderProvider>
+      <>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
 
-      <StatusBar style="dark" />
-    </>
+        <StatusBar style="dark" />
+      </>
+    </OrderProvider>
   );
 }
