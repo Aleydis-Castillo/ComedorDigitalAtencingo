@@ -1,7 +1,7 @@
 import React, {
-    createContext,
-    useContext,
-    useState,
+  createContext,
+  useContext,
+  useState,
 } from 'react';
 
 interface OrderData {
@@ -11,7 +11,9 @@ interface OrderData {
 
   deliveryType: 'cafeteria' | 'office' | null;
 
-  officeArea: string | null;
+  zone: string | null;
+
+  location: string;
 
   observations: string;
 
@@ -27,8 +29,12 @@ interface OrderData {
     value: 'cafeteria' | 'office' | null
   ) => void;
 
-  setOfficeArea: (
+  setZone: (
     value: string | null
+  ) => void;
+
+  setLocation: (
+    value: string
   ) => void;
 
   setObservations: (
@@ -47,18 +53,23 @@ export function OrderProvider({
 }: {
   children: React.ReactNode;
 }) {
-
   const [foodType, setFoodType] = useState<
     'breakfast' | 'lunch' | null
   >(null);
 
-  const [dish, setDish] = useState<string | null>(null);
+  const [dish, setDish] =
+    useState<string | null>(null);
 
-  const [deliveryType, setDeliveryType] = useState<
-    'cafeteria' | 'office' | null
-  >(null);
+  const [deliveryType, setDeliveryType] =
+    useState<
+      'cafeteria' | 'office' | null
+    >(null);
 
-  const [officeArea, setOfficeArea] = useState<string | null>(null);
+  const [zone, setZone] =
+    useState<string | null>(null);
+
+  const [location, setLocation] =
+    useState('');
 
   const [observations, setObservations] =
     useState('');
@@ -67,7 +78,8 @@ export function OrderProvider({
     setFoodType(null);
     setDish(null);
     setDeliveryType(null);
-    setOfficeArea(null);
+    setZone(null);
+    setLocation('');
     setObservations('');
   }
 
@@ -77,13 +89,15 @@ export function OrderProvider({
         foodType,
         dish,
         deliveryType,
-        officeArea,
+        zone,
+        location,
         observations,
 
         setFoodType,
         setDish,
         setDeliveryType,
-        setOfficeArea,
+        setZone,
+        setLocation,
         setObservations,
 
         resetOrder,
