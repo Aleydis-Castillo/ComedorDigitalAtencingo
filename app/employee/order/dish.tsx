@@ -1,8 +1,7 @@
 import React from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
+  ScrollView,
+  StyleSheet,
 } from 'react-native';
 
 import { router } from 'expo-router';
@@ -12,6 +11,7 @@ import { weeklyMenu } from '../../../constants/mockData';
 
 import PrimaryButton from '../../../components/buttons/PrimaryButton';
 import DishCard from '../../../components/order/DishCard';
+import StepHeader from '../../../components/order/StepHeader';
 
 import { useOrder } from '../../../context/OrderContext';
 
@@ -34,19 +34,15 @@ export default function DishScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
     >
 
-      <Text style={styles.step}>
-        Paso 2 de 6
-      </Text>
-
-      <Text style={styles.title}>
-        Selecciona tu platillo
-      </Text>
-
-      <Text style={styles.subtitle}>
-        Elige una opción.
-      </Text>
+      <StepHeader
+        title="Selecciona tu platillo"
+        subtitle="Elige una opción del menú disponible."
+        step={2}
+        totalSteps={5}
+      />
 
       {dishes.map((item) => (
         <DishCard
@@ -61,9 +57,7 @@ export default function DishScreen() {
       <PrimaryButton
         title="Continuar"
         disabled={!dish}
-        onPress={() => {
-          router.push('/employee/order/delivery');
-        }}
+        onPress={() => router.push('/employee/order/delivery')}
       />
 
     </ScrollView>
@@ -72,34 +66,16 @@ export default function DishScreen() {
 
 const styles = StyleSheet.create({
 
-  container:{
-    flex:1,
-    backgroundColor:COLORS.background,
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
 
-  content:{
-    padding:20,
-    paddingTop:50,
-    paddingBottom:40,
-  },
-
-  step:{
-    color:COLORS.gray,
-    fontSize:16,
-    marginBottom:10,
-  },
-
-  title:{
-    fontSize:30,
-    fontWeight:'bold',
-    color:COLORS.primary,
-  },
-
-  subtitle:{
-    marginTop:8,
-    marginBottom:30,
-    color:COLORS.gray,
-    fontSize:16,
+  content: {
+    padding: 20,
+    paddingTop: 50,
+    paddingBottom: 40,
+    flexGrow: 1,
   },
 
 });

@@ -1,16 +1,16 @@
 import React from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
+  ScrollView,
+  StyleSheet,
 } from 'react-native';
 
 import { router } from 'expo-router';
 
+import { COLORS } from '../../../constants/colors';
+
 import PrimaryButton from '../../../components/buttons/PrimaryButton';
 import DeliveryCard from '../../../components/order/DeliveryCard';
-
-import { COLORS } from '../../../constants/colors';
+import StepHeader from '../../../components/order/StepHeader';
 
 import { useOrder } from '../../../context/OrderContext';
 
@@ -33,18 +33,15 @@ export default function DeliveryScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.step}>
-        Paso 3 de 7
-      </Text>
 
-      <Text style={styles.title}>
-        ¿Dónde deseas recibir tu pedido?
-      </Text>
-
-      <Text style={styles.subtitle}>
-        Selecciona una opción.
-      </Text>
+      <StepHeader
+        title="¿Dónde deseas recibir tu pedido?"
+        subtitle="Selecciona el lugar de entrega."
+        step={3}
+        totalSteps={5}
+      />
 
       <DeliveryCard
         icon="🍽️"
@@ -67,11 +64,13 @@ export default function DeliveryScreen() {
         disabled={!deliveryType}
         onPress={handleContinue}
       />
+
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -81,24 +80,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 50,
     paddingBottom: 40,
+    flexGrow: 1,
   },
 
-  step: {
-    color: COLORS.gray,
-    marginBottom: 10,
-    fontSize: 16,
-  },
-
-  title: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-
-  subtitle: {
-    color: COLORS.gray,
-    marginTop: 8,
-    marginBottom: 30,
-    fontSize: 16,
-  },
 });

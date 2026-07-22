@@ -2,8 +2,7 @@ import React from 'react';
 import {
     ScrollView,
     StyleSheet,
-    Text,
-    View,
+    View
 } from 'react-native';
 
 import { router } from 'expo-router';
@@ -13,33 +12,28 @@ import { officeAreas } from '../../../constants/officeAreas';
 
 import PrimaryButton from '../../../components/buttons/PrimaryButton';
 import OfficeCard from '../../../components/order/OfficeCard';
+import StepHeader from '../../../components/order/StepHeader';
 
 import { useOrder } from '../../../context/OrderContext';
 
 export default function OfficeScreen() {
-
   const {
-    officeArea,
-    setOfficeArea,
+    zone,
+    setZone,
   } = useOrder();
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
     >
-
-      <Text style={styles.step}>
-        Paso 4 de 7
-      </Text>
-
-      <Text style={styles.title}>
-        ¿A qué área deseas enviar tu pedido?
-      </Text>
-
-      <Text style={styles.subtitle}>
-        Selecciona tu área de trabajo.
-      </Text>
+      <StepHeader
+        title="Zona de entrega"
+        subtitle="Selecciona la zona donde deseas recibir tu pedido."
+        step={4}
+        totalSteps={8}
+      />
 
       <View style={styles.grid}>
         {officeAreas.map((area) => (
@@ -47,26 +41,24 @@ export default function OfficeScreen() {
             key={area.id}
             icon={area.icon}
             name={area.name}
-            selected={officeArea === area.name}
-            onPress={() => setOfficeArea(area.name)}
+            selected={zone === area.name}
+            onPress={() => setZone(area.name)}
           />
         ))}
       </View>
 
       <PrimaryButton
         title="Continuar"
-        disabled={!officeArea}
+        disabled={!zone}
         onPress={() => {
-          router.push('/employee/order/obsservation');
+          router.push('/employee/order/location');
         }}
       />
-
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -76,32 +68,13 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 50,
     paddingBottom: 40,
-  },
-
-  step: {
-    color: COLORS.gray,
-    fontSize: 16,
-    marginBottom: 10,
-  },
-
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-
-  subtitle: {
-    marginTop: 8,
-    marginBottom: 25,
-    color: COLORS.gray,
-    fontSize: 16,
+    flexGrow: 1,
   },
 
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 25,
+    marginBottom: 40,
   },
-
 });
