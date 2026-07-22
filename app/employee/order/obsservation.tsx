@@ -1,9 +1,9 @@
 import React from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
 } from 'react-native';
 
 import { router } from 'expo-router';
@@ -32,7 +32,7 @@ export default function ObservationScreen() {
         title="Observaciones"
         subtitle="Si deseas modificar tu platillo, escríbelo aquí. Este paso es opcional."
         step={6}
-        totalSteps={8}
+        totalSteps={7}
       />
 
       <Text style={styles.label}>
@@ -55,9 +55,9 @@ export default function ObservationScreen() {
       </Text>
 
       <PrimaryButton
-        title="Continuar"
+        title="Revisar pedido"
         onPress={() => {
-          router.push('/employee/order/summary');
+          router.push('/employee/order/fingerprint');
         }}
       />
     </ScrollView>
