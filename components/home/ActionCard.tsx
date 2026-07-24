@@ -1,17 +1,20 @@
 import React from 'react';
+
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
-import { COLORS } from '../../constants/colors';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface Props {
-  icon: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
   title: string;
   subtitle: string;
+  color: string;
+  backgroundColor: string;
   onPress: () => void;
 }
 
@@ -19,72 +22,128 @@ export default function ActionCard({
   icon,
   title,
   subtitle,
+  color,
+  backgroundColor,
   onPress,
 }: Props) {
   return (
-    <TouchableOpacity
-      style={styles.card}
+    <Pressable
       onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        pressed && styles.cardPressed,
+      ]}
     >
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>
-          {icon}
-        </Text>
+      <View
+        style={[
+          styles.iconContainer,
+          {
+            backgroundColor,
+          },
+        ]}
+      >
+        <MaterialCommunityIcons
+          name={icon}
+          size={31}
+          color={color}
+        />
       </View>
 
-      <View style={styles.info}>
-        <Text style={styles.title}>
-          {title}
-        </Text>
+      <Text
+        style={styles.title}
+        numberOfLines={2}
+      >
+        {title}
+      </Text>
 
-        <Text style={styles.subtitle}>
-          {subtitle}
-        </Text>
+      <Text
+        style={styles.subtitle}
+        numberOfLines={3}
+      >
+        {subtitle}
+      </Text>
+
+      <View
+        style={[
+          styles.arrowContainer,
+          {
+            backgroundColor,
+          },
+        ]}
+      >
+        <MaterialCommunityIcons
+          name="chevron-right"
+          size={25}
+          color={color}
+        />
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-
   card: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 18,
-    flexDirection: 'row',
+    flex: 1,
+    minHeight: 220,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: '#F0F0ED',
+    paddingHorizontal: 10,
+    paddingVertical: 17,
     alignItems: 'center',
-    marginBottom: 16,
-    elevation: 3,
+    elevation: 4,
+
+    shadowColor: '#1B2636',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.07,
+    shadowRadius: 9,
+  },
+
+  cardPressed: {
+    opacity: 0.88,
+    transform: [
+      {
+        scale: 0.97,
+      },
+    ],
   },
 
   iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.accent,
+    width: 63,
+    height: 63,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-
-  icon: {
-    fontSize: 28,
-  },
-
-  info: {
-    marginLeft: 18,
-    flex: 1,
+    marginBottom: 15,
   },
 
   title: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+    color: '#121B2B',
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: '800',
+    textAlign: 'center',
   },
 
   subtitle: {
-    marginTop: 4,
-    color: COLORS.gray,
-    fontSize: 14,
+    color: '#687284',
+    fontSize: 11.5,
+    lineHeight: 16,
+    textAlign: 'center',
+    marginTop: 7,
+    flex: 1,
   },
 
+  arrowContainer: {
+    width: 35,
+    height: 35,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 11,
+  },
 });
