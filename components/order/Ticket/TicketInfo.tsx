@@ -1,4 +1,5 @@
 import React from 'react';
+
 import {
   StyleSheet,
   View,
@@ -10,7 +11,6 @@ interface Props {
   foodType: string;
   dish: string;
   deliveryType: string;
-  zone?: string;
   location?: string;
   observations?: string;
 }
@@ -19,13 +19,11 @@ export default function TicketInfo({
   foodType,
   dish,
   deliveryType,
-  zone,
   location,
   observations,
 }: Props) {
   return (
     <View style={styles.container}>
-
       <TicketRow
         icon="silverware-fork-knife"
         title="Tipo"
@@ -45,19 +43,15 @@ export default function TicketInfo({
       />
 
       {deliveryType === 'Oficina' && (
-        <>
-          <TicketRow
-            icon="factory"
-            title="Zona"
-            value={zone || '-'}
-          />
-
-          <TicketRow
-            icon="map-marker"
-            title="Ubicación"
-            value={location || '-'}
-          />
-        </>
+        <TicketRow
+          icon="map-marker"
+          title="Ubicación"
+          value={
+            location?.trim()
+              ? location
+              : '-'
+          }
+        />
       )}
 
       <TicketRow
@@ -69,15 +63,13 @@ export default function TicketInfo({
             : 'Sin observaciones'
         }
       />
-
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-
-  container: {
-    gap: 4,
-  },
-
-});
+const styles =
+  StyleSheet.create({
+    container: {
+      gap: 4,
+    },
+  });

@@ -1,18 +1,23 @@
 import React from 'react';
+
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  MaterialCommunityIcons,
+} from '@expo/vector-icons';
+
 import { router } from 'expo-router';
 
 import { COLORS } from '../../constants/colors';
 
-type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
+type IconName =
+  keyof typeof MaterialCommunityIcons.glyphMap;
 
 interface ActionCardProps {
   title: string;
@@ -33,7 +38,9 @@ function ActionCard({
       style={styles.actionCard}
       onPress={onPress}
     >
-      <View style={styles.actionIconContainer}>
+      <View
+        style={styles.actionIconContainer}
+      >
         <MaterialCommunityIcons
           name={icon}
           size={30}
@@ -46,7 +53,9 @@ function ActionCard({
           {title}
         </Text>
 
-        <Text style={styles.actionDescription}>
+        <Text
+          style={styles.actionDescription}
+        >
           {description}
         </Text>
       </View>
@@ -63,26 +72,30 @@ function ActionCard({
 export default function ManagerDashboardScreen() {
   return (
     <View style={styles.container}>
-      <View pointerEvents="none" style={styles.background}>
+      <View
+        pointerEvents="none"
+        style={styles.background}
+      >
         <View style={styles.topCircle} />
+
         <View style={styles.bottomCircle} />
 
         <MaterialCommunityIcons
-          name="silverware-fork-knife"
+          name="account-group-outline"
           size={58}
           color="#D6E8D7"
           style={styles.backgroundIconOne}
         />
 
         <MaterialCommunityIcons
-          name="chef-hat"
+          name="file-chart-outline"
           size={54}
           color="#D6E8D7"
           style={styles.backgroundIconTwo}
         />
 
         <MaterialCommunityIcons
-          name="food-outline"
+          name="account-key-outline"
           size={52}
           color="#F3DFC4"
           style={styles.backgroundIconThree}
@@ -94,55 +107,57 @@ export default function ManagerDashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={styles.headerTextContainer}>
+          <View
+            style={styles.headerTextContainer}
+          >
             <Text style={styles.greeting}>
               Buenos días
             </Text>
 
             <Text style={styles.title}>
-              Administrador del comedor
+              Administración general
             </Text>
 
             <Text style={styles.subtitle}>
-              Gestiona el menú y los servicios del comedor.
+              Gestiona practicantes y consulta los
+              reportes del servicio de comedor.
             </Text>
           </View>
 
           <View style={styles.profileButton}>
             <MaterialCommunityIcons
-              name="account-outline"
+              name="shield-account-outline"
               size={30}
               color={COLORS.primary}
             />
           </View>
         </View>
 
-        <View style={styles.statusCard}>
-          <View style={styles.statusIconContainer}>
+        <View style={styles.infoCard}>
+          <View
+            style={styles.infoIconContainer}
+          >
             <MaterialCommunityIcons
-              name="calendar-check-outline"
+              name="shield-check-outline"
               size={31}
               color={COLORS.primary}
             />
           </View>
 
-          <View style={styles.statusContent}>
-            <Text style={styles.statusLabel}>
-              Menú semanal
+          <View style={styles.infoContent}>
+            <Text style={styles.infoLabel}>
+              Panel administrativo
             </Text>
 
-            <Text style={styles.statusTitle}>
-              Menú publicado
+            <Text style={styles.infoTitle}>
+              Gestión y supervisión
             </Text>
 
-            <Text style={styles.statusDescription}>
-              El menú actual está disponible para los empleados.
-            </Text>
-          </View>
-
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusBadgeText}>
-              Activo
+            <Text
+              style={styles.infoDescription}
+            >
+              Administra accesos temporales y
+              consulta la información semanal.
             </Text>
           </View>
         </View>
@@ -152,43 +167,41 @@ export default function ManagerDashboardScreen() {
             Administración
           </Text>
 
-          <Text style={styles.sectionSubtitle}>
+          <Text
+            style={styles.sectionSubtitle}
+          >
             Selecciona una opción
           </Text>
         </View>
 
         <ActionCard
-          title="Modificar menú semanal"
-          description="Agrega, edita o elimina los platillos de cada día."
-          icon="calendar-edit"
-          onPress={() => router.push('/manager/weekly-menu')}
-        />
-
-        <ActionCard
-          title="Registrar eventos"
-          description="Programa servicios especiales, fechas y cantidades."
-          icon="calendar-star"
-          onPress={() => router.push('/manager/events')}
+          title="Accesos temporales"
+          description="Genera, consulta y administra accesos temporales para practicantes."
+          icon="account-key-outline"
+          onPress={() =>
+            router.push(
+              '/manager/intern-codes',
+            )
+          }
         />
 
         <ActionCard
           title="Consultar reportes"
-          description="Revisa reportes semanales de consumo y asistencia."
+          description="Consulta reportes semanales y descarga los archivos en Excel o PDF."
           icon="file-chart-outline"
-          onPress={() => router.push('/manager/reports')}
-        />
-
-        <ActionCard
-          title="Códigos de practicantes"
-          description="Genera y administra accesos temporales."
-          icon="account-key-outline"
-          onPress={() => router.push('/manager/intern-codes')}
+          onPress={() =>
+            router.push(
+              '/manager/reports',
+            )
+          }
         />
 
         <TouchableOpacity
           activeOpacity={0.85}
           style={styles.logoutButton}
-          onPress={() => router.replace('/')}
+          onPress={() =>
+            router.replace('/')
+          }
         >
           <MaterialCommunityIcons
             name="logout"
@@ -247,7 +260,11 @@ const styles = StyleSheet.create({
     top: 260,
     right: -8,
     opacity: 0.55,
-    transform: [{ rotate: '14deg' }],
+    transform: [
+      {
+        rotate: '14deg',
+      },
+    ],
   },
 
   backgroundIconTwo: {
@@ -255,7 +272,11 @@ const styles = StyleSheet.create({
     top: 570,
     left: -10,
     opacity: 0.5,
-    transform: [{ rotate: '-17deg' }],
+    transform: [
+      {
+        rotate: '-17deg',
+      },
+    ],
   },
 
   backgroundIconThree: {
@@ -263,7 +284,11 @@ const styles = StyleSheet.create({
     bottom: 100,
     right: 6,
     opacity: 0.5,
-    transform: [{ rotate: '15deg' }],
+    transform: [
+      {
+        rotate: '15deg',
+      },
+    ],
   },
 
   header: {
@@ -307,16 +332,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
 
     shadowColor: '#000',
+
     shadowOffset: {
       width: 0,
       height: 4,
     },
+
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
   },
 
-  statusCard: {
+  infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.white,
@@ -327,16 +354,18 @@ const styles = StyleSheet.create({
     borderColor: '#E2ECE3',
 
     shadowColor: '#000',
+
     shadowOffset: {
       width: 0,
       height: 4,
     },
+
     shadowOpacity: 0.07,
     shadowRadius: 9,
     elevation: 3,
   },
 
-  statusIconContainer: {
+  infoIconContainer: {
     width: 58,
     height: 58,
     borderRadius: 19,
@@ -346,41 +375,28 @@ const styles = StyleSheet.create({
     marginRight: 13,
   },
 
-  statusContent: {
+  infoContent: {
     flex: 1,
   },
 
-  statusLabel: {
+  infoLabel: {
     color: COLORS.gray,
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 3,
   },
 
-  statusTitle: {
+  infoTitle: {
     color: COLORS.text,
     fontSize: 17,
     fontWeight: '800',
     marginBottom: 3,
   },
 
-  statusDescription: {
+  infoDescription: {
     color: COLORS.gray,
     fontSize: 12,
     lineHeight: 17,
-  },
-
-  statusBadge: {
-    backgroundColor: '#E2F3E5',
-    borderRadius: 20,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-  },
-
-  statusBadgeText: {
-    color: COLORS.primary,
-    fontSize: 11,
-    fontWeight: '800',
   },
 
   sectionHeader: {
@@ -410,10 +426,12 @@ const styles = StyleSheet.create({
     borderColor: '#E7ECE7',
 
     shadowColor: '#000',
+
     shadowOffset: {
       width: 0,
       height: 3,
     },
+
     shadowOpacity: 0.06,
     shadowRadius: 7,
     elevation: 2,

@@ -1,6 +1,14 @@
-import React from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,38 +18,167 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-import { COLORS } from '../../../constants/colors';
-import { weeklyMenu } from '../../../constants/mockData';
-
 import PrimaryButton from '../../../components/buttons/PrimaryButton';
 import DishCard from '../../../components/order/DishCard';
 import StepHeader from '../../../components/order/StepHeader';
 
+import { COLORS } from '../../../constants/colors';
 import { useOrder } from '../../../context/OrderContext';
+
+import { getMenu } from '../../../services/menuApi';
+
+import {
+  FrontendDayKey,
+  FrontendDish,
+  mapApiMenuToWeeklyMenu,
+} from '../../../services/menuMapper';
+
+function getCurrentDayKey(): FrontendDayKey | null {
+  const currentDay = new Date().getDay();
+
+  switch (currentDay) {
+    case 1:
+      return 'LUN';
+
+    case 2:
+      return 'MAR';
+
+    case 3:
+      return 'MIE';
+
+    case 4:
+      return 'JUE';
+
+    case 5:
+      return 'VIE';
+
+    case 6:
+      return 'SAB';
+
+    default:
+      return null;
+  }
+}
 
 export default function DishScreen() {
   const {
     foodType,
     dish,
+    dishId,
     setDish,
+    setDishId,
   } = useOrder();
 
-  const todayMenu = weeklyMenu.LUN;
+  const [dishes, setDishes] =
+    useState<FrontendDish[]>([]);
 
-  const dishes =
-    foodType === 'breakfast'
-      ? todayMenu.breakfast
-      : todayMenu.lunch;
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [isRefreshing, setIsRefreshing] =
+    useState(false);
+
+  const currentDayKey = useMemo(
+    () => getCurrentDayKey(),
+    [],
+  );
 
   const serviceName =
     foodType === 'breakfast'
       ? 'Desayuno'
-      : 'Comida';
+      : foodType === 'lunch'
+        ? 'Comida'
+        : 'Servicio';
+
+  const loadDishes = useCallback(
+    async (showLoading = true) => {
+      try {
+        if (showLoading) {
+          setIsLoading(true);
+        }
+
+        if (!foodType) {
+          setDishes([]);
+          return;
+        }
+
+        if (!currentDayKey) {
+          setDishes([]);
+          setDish(null);
+          setDishId(null);
+          return;
+        }
+
+        const apiMenu = await getMenu();
+
+        const weeklyMenu =
+          mapApiMenuToWeeklyMenu(
+            apiMenu,
+            true,
+          );
+
+        const todayMenu =
+          weeklyMenu[currentDayKey];
+
+        const availableDishes =
+          foodType === 'breakfast'
+            ? todayMenu.breakfast
+            : todayMenu.lunch;
+
+        setDishes(availableDishes);
+
+        /*
+         * Si el platillo seleccionado ya no existe
+         * o dejó de estar disponible, limpiamos la selección.
+         */
+        if (
+          dishId &&
+          !availableDishes.some(
+            item => item.id === dishId,
+          )
+        ) {
+          setDish(null);
+          setDishId(null);
+        }
+      } catch (error) {
+        console.error(
+          'Error al consultar los platillos:',
+          error,
+        );
+
+        setDishes([]);
+        setDish(null);
+        setDishId(null);
+
+        Alert.alert(
+          'No fue posible cargar el menú',
+          error instanceof Error
+            ? error.message
+            : 'Revisa la conexión con el servidor.',
+        );
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [
+      currentDayKey,
+      dishId,
+      foodType,
+      setDish,
+      setDishId,
+    ],
+  );
+
+  useEffect(() => {
+    loadDishes();
+  }, [loadDishes]);
 
   const getDishIcon = (
     dishName: string,
   ): keyof typeof MaterialCommunityIcons.glyphMap => {
-    const normalizedName = dishName.toLowerCase();
+    const normalizedName =
+      dishName.toLowerCase();
 
     if (
       normalizedName.includes('pollo') ||
@@ -81,7 +218,8 @@ export default function DishScreen() {
 
     if (
       normalizedName.includes('sopa') ||
-      normalizedName.includes('caldo')
+      normalizedName.includes('caldo') ||
+      normalizedName.includes('pozole')
     ) {
       return 'pot-steam-outline';
     }
@@ -107,16 +245,66 @@ export default function DishScreen() {
       return 'food';
     }
 
+    if (
+      normalizedName.includes('chilaquil') ||
+      normalizedName.includes('enchilada')
+    ) {
+      return 'food-variant';
+    }
+
     return 'silverware-fork-knife';
   };
 
+  const handleSelectDish = (
+    selectedDish: FrontendDish,
+  ) => {
+    const isSelected =
+      dishId === selectedDish.id;
+
+    if (isSelected) {
+      setDish(null);
+      setDishId(null);
+      return;
+    }
+
+    setDish(selectedDish.name);
+    setDishId(selectedDish.id);
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    loadDishes(false);
+  };
+
   const handleContinue = () => {
-    if (!dish) {
+    if (!dish || !dishId) {
+      Alert.alert(
+        'Selecciona un platillo',
+        'Elige uno de los platillos disponibles para continuar.',
+      );
+
       return;
     }
 
     router.push('/employee/order/delivery');
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color={COLORS.primary}
+          />
+
+          <Text style={styles.loadingText}>
+            Consultando los platillos disponibles...
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -126,6 +314,14 @@ export default function DishScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
+          />
+        }
       >
         <StepHeader
           title="Selecciona tu platillo"
@@ -149,7 +345,7 @@ export default function DishScreen() {
 
           <View style={styles.menuSummaryContent}>
             <Text style={styles.menuLabel}>
-              Menú de hoy
+              Menú publicado de hoy
             </Text>
 
             <Text style={styles.serviceName}>
@@ -163,7 +359,9 @@ export default function DishScreen() {
             </Text>
 
             <Text style={styles.countText}>
-              opciones
+              {dishes.length === 1
+                ? 'opción'
+                : 'opciones'}
             </Text>
           </View>
         </View>
@@ -174,15 +372,17 @@ export default function DishScreen() {
               Platillos disponibles
             </Text>
 
-            {dishes.map((item) => (
+            {dishes.map(item => (
               <DishCard
                 key={item.id}
                 name={item.name}
                 description={item.description}
                 icon={getDishIcon(item.name)}
-                available
-                selected={dish === item.name}
-                onPress={() => setDish(item.name)}
+                available={item.available}
+                selected={dishId === item.id}
+                onPress={() =>
+                  handleSelectDish(item)
+                }
               />
             ))}
           </>
@@ -201,8 +401,23 @@ export default function DishScreen() {
             </Text>
 
             <Text style={styles.emptyText}>
-              El comedor todavía no ha registrado opciones para
-              este servicio.
+              No existe un menú publicado con opciones para
+              este servicio en el día de hoy.
+            </Text>
+          </View>
+        )}
+
+        {!currentDayKey && (
+          <View style={styles.weekendNotice}>
+            <MaterialCommunityIcons
+              name="calendar-remove-outline"
+              size={23}
+              color="#9B691A"
+            />
+
+            <Text style={styles.weekendNoticeText}>
+              El servicio del comedor funciona de lunes
+              a sábado.
             </Text>
           </View>
         )}
@@ -210,7 +425,7 @@ export default function DishScreen() {
         <View style={styles.buttonContainer}>
           <PrimaryButton
             title="Continuar"
-            disabled={!dish}
+            disabled={!dishId}
             onPress={handleContinue}
           />
         </View>
@@ -253,6 +468,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF0DF',
   },
 
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+
+  loadingText: {
+    marginTop: 14,
+    color: COLORS.gray,
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+
   menuSummary: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -263,6 +493,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E9E7',
     elevation: 2,
+
     shadowColor: '#000000',
     shadowOffset: {
       width: 0,
@@ -358,6 +589,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     textAlign: 'center',
+  },
+
+  weekendNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3DF',
+    borderRadius: 17,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: '#F5DFB8',
+  },
+
+  weekendNoticeText: {
+    flex: 1,
+    marginLeft: 10,
+    color: '#8A641F',
+    fontSize: 13,
+    lineHeight: 18,
   },
 
   buttonContainer: {

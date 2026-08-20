@@ -1,4 +1,8 @@
-import React from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
 import {
   Pressable,
@@ -7,61 +11,244 @@ import {
   View,
 } from 'react-native';
 
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  MaterialCommunityIcons,
+} from '@expo/vector-icons';
 
-interface UserData {
-  name: string;
-  role: string;
+import {
+  router,
+  useFocusEffect,
+} from 'expo-router';
+
+import {
+  useAuth,
+} from '../../context/AuthContext';
+
+import {
+  getUserOrders,
+} from '../../services/orderApi';
+
+function getRoleLabel(
+  role:
+    | 'EMPLOYEE'
+    | 'PRACTITIONER'
+    | 'EXTERNAL'
+    | 'MANAGER'
+    | 'COMEDOR',
+) {
+  switch (role) {
+    case 'EMPLOYEE':
+      return 'Empleado';
+
+    case 'PRACTITIONER':
+      return 'Practicante';
+
+    case 'EXTERNAL':
+      return 'Personal externo';
+
+    case 'MANAGER':
+      return 'Responsable';
+
+    case 'COMEDOR':
+      return 'Comedor';
+
+    default:
+      return 'Usuario';
+  }
+}
+
+function getInitials(
+  name: string,
+) {
+  const words =
+    name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+  if (words.length === 0) {
+    return 'U';
+  }
+
+  if (words.length === 1) {
+    return words[0]
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  return (
+    words[0].charAt(0) +
+    words[1].charAt(0)
+  ).toUpperCase();
 }
 
 export default function DashboardHeader() {
-  const user: UserData = {
-    name: 'Paola Suárez',
-    role: 'Empleado',
-  };
+  const {
+    user,
+  } = useAuth();
 
-  const currentDate = new Date();
-  const hour = currentDate.getHours();
+  const [
+    hasReadyOrder,
+    setHasReadyOrder,
+  ] = useState(false);
 
-  let greeting = 'Buenos días';
+  const loadReadyOrders =
+    useCallback(
+      async () => {
+        if (!user?.id) {
+          setHasReadyOrder(
+            false,
+          );
+
+          return;
+        }
+
+        try {
+          const orders =
+            await getUserOrders(
+              user.id,
+            );
+
+          const readyOrderExists =
+            orders.some(
+              order =>
+                order.status ===
+                'READY',
+            );
+
+          setHasReadyOrder(
+            readyOrderExists,
+          );
+        } catch (error) {
+          console.error(
+            'Error al consultar pedidos listos:',
+            error,
+          );
+
+          setHasReadyOrder(
+            false,
+          );
+        }
+      },
+      [
+        user?.id,
+      ],
+    );
+
+  useEffect(() => {
+    loadReadyOrders();
+  }, [
+    loadReadyOrders,
+  ]);
+
+
+  useFocusEffect(
+    useCallback(() => {
+      loadReadyOrders();
+    }, [
+      loadReadyOrders,
+    ]),
+  );
+
+  const currentDate =
+    new Date();
+
+  const hour =
+    currentDate.getHours();
+
+  let greeting =
+    'Buenos días';
+
   let greetingIcon:
     keyof typeof MaterialCommunityIcons.glyphMap =
     'weather-sunny';
 
-  if (hour >= 12 && hour < 19) {
-    greeting = 'Buenas tardes';
-    greetingIcon = 'weather-partly-cloudy';
+  if (
+    hour >= 12 &&
+    hour < 19
+  ) {
+    greeting =
+      'Buenas tardes';
+
+    greetingIcon =
+      'weather-partly-cloudy';
   }
 
   if (hour >= 19) {
-    greeting = 'Buenas noches';
-    greetingIcon = 'weather-night';
+    greeting =
+      'Buenas noches';
+
+    greetingIcon =
+      'weather-night';
   }
 
   const formattedDate =
-    currentDate.toLocaleDateString('es-MX', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+    currentDate.toLocaleDateString(
+      'es-MX',
+      {
+        weekday:
+          'long',
+
+        day:
+          'numeric',
+
+        month:
+          'long',
+
+        year:
+          'numeric',
+      },
+    );
 
   const date =
-    formattedDate.charAt(0).toUpperCase() +
+    formattedDate
+      .charAt(0)
+      .toUpperCase() +
     formattedDate.slice(1);
 
-  const initials = user.name
-    .split(' ')
-    .map((word) => word.charAt(0))
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  const userName =
+    user?.name?.trim() ||
+    'Usuario';
+
+  const initials =
+    getInitials(
+      userName,
+    );
+
+  const roleName =
+    user
+      ? getRoleLabel(
+          user.role,
+        )
+      : 'Usuario';
+
+  const departmentName =
+    user?.department?.trim() ||
+    'Sin área registrada';
+
+  function openNotifications() {
+    router.push(
+      '/employee/notifications',
+    );
+  }
 
   return (
     <>
-      <View style={styles.brandRow}>
-        <View style={styles.brand}>
-          <View style={styles.brandIcon}>
+      <View
+        style={
+          styles.brandRow
+        }
+      >
+        <View
+          style={
+            styles.brand
+          }
+        >
+          <View
+            style={
+              styles.brandIcon
+            }
+          >
             <MaterialCommunityIcons
               name="sprout-outline"
               size={27}
@@ -70,68 +257,137 @@ export default function DashboardHeader() {
           </View>
 
           <View>
-            <Text style={styles.brandName}>
+            <Text
+              style={
+                styles.brandName
+              }
+            >
               ZUCARMEX
             </Text>
 
-            <Text style={styles.brandSubtitle}>
+            <Text
+              style={
+                styles.brandSubtitle
+              }
+            >
               COMEDOR ZUCARMEX
             </Text>
           </View>
         </View>
 
         <Pressable
-          style={({ pressed }) => [
+          onPress={
+            openNotifications
+          }
+          style={({
+            pressed,
+          }) => [
             styles.notificationButton,
-            pressed && styles.pressed,
+
+            pressed &&
+              styles.pressed,
           ]}
         >
           <MaterialCommunityIcons
-            name="bell-outline"
+            name={
+              hasReadyOrder
+                ? 'bell'
+                : 'bell-outline'
+            }
             size={25}
             color="#162033"
           />
 
-          <View style={styles.notificationDot} />
+          {hasReadyOrder && (
+            <View
+              style={
+                styles.notificationDot
+              }
+            />
+          )}
         </Pressable>
       </View>
 
-      <View style={styles.card}>
-        <View style={styles.mainRow}>
-          <View style={styles.userContent}>
-            <View style={styles.greetingRow}>
+      <View
+        style={
+          styles.card
+        }
+      >
+        <View
+          style={
+            styles.mainRow
+          }
+        >
+          <View
+            style={
+              styles.userContent
+            }
+          >
+            <View
+              style={
+                styles.greetingRow
+              }
+            >
               <MaterialCommunityIcons
-                name={greetingIcon}
+                name={
+                  greetingIcon
+                }
                 size={23}
                 color="#607088"
               />
 
-              <Text style={styles.greeting}>
+              <Text
+                style={
+                  styles.greeting
+                }
+              >
                 {greeting}
               </Text>
             </View>
 
             <Text
-              style={styles.name}
-              numberOfLines={1}
+              style={
+                styles.name
+              }
+              numberOfLines={2}
               adjustsFontSizeToFit
             >
-              {user.name}
+              {userName}
             </Text>
 
-            <Text style={styles.message}>
+            <Text
+              style={
+                styles.message
+              }
+            >
               ¡Que tengas una excelente jornada!
             </Text>
           </View>
 
-          <View style={styles.avatarBorder}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
+          <View
+            style={
+              styles.avatarBorder
+            }
+          >
+            <View
+              style={
+                styles.avatar
+              }
+            >
+              <Text
+                style={
+                  styles.avatarText
+                }
+              >
                 {initials}
               </Text>
             </View>
 
-            <View style={styles.avatarDecoration}>
+            <View
+              style={
+                styles.avatarDecoration
+              }
+            >
               <MaterialCommunityIcons
                 name="creation-outline"
                 size={19}
@@ -141,9 +397,21 @@ export default function DashboardHeader() {
           </View>
         </View>
 
-        <View style={styles.informationRow}>
-          <View style={styles.informationItem}>
-            <View style={styles.informationIcon}>
+        <View
+          style={
+            styles.informationRow
+          }
+        >
+          <View
+            style={
+              styles.informationItem
+            }
+          >
+            <View
+              style={
+                styles.informationIcon
+              }
+            >
               <MaterialCommunityIcons
                 name="account-outline"
                 size={19}
@@ -151,15 +419,31 @@ export default function DashboardHeader() {
               />
             </View>
 
-            <Text style={styles.informationText}>
-              {user.role}
+            <Text
+              style={
+                styles.informationText
+              }
+            >
+              {roleName}
             </Text>
           </View>
 
-          <View style={styles.verticalDivider} />
+          <View
+            style={
+              styles.verticalDivider
+            }
+          />
 
-          <View style={styles.informationItem}>
-            <View style={styles.informationIcon}>
+          <View
+            style={
+              styles.informationItem
+            }
+          >
+            <View
+              style={
+                styles.informationIcon
+              }
+            >
               <MaterialCommunityIcons
                 name="office-building-outline"
                 size={19}
@@ -168,18 +452,69 @@ export default function DashboardHeader() {
             </View>
 
             <Text
-              style={styles.informationText}
-              numberOfLines={1}
+              style={
+                styles.informationText
+              }
+              numberOfLines={2}
             >
-              Comedor Zucarmex
+              {departmentName}
             </Text>
           </View>
         </View>
 
-        <View style={styles.horizontalDivider} />
+        {user?.employeeNumber && (
+          <>
+            <View
+              style={
+                styles.horizontalDivider
+              }
+            />
 
-        <View style={styles.dateRow}>
-          <View style={styles.informationIcon}>
+            <View
+              style={
+                styles.dateRow
+              }
+            >
+              <View
+                style={
+                  styles.informationIcon
+                }
+              >
+                <MaterialCommunityIcons
+                  name="badge-account-outline"
+                  size={19}
+                  color="#566235"
+                />
+              </View>
+
+              <Text
+                style={
+                  styles.date
+                }
+              >
+                No. trabajador:{' '}
+                {user.employeeNumber}
+              </Text>
+            </View>
+          </>
+        )}
+
+        <View
+          style={
+            styles.horizontalDivider
+          }
+        />
+
+        <View
+          style={
+            styles.dateRow
+          }
+        >
+          <View
+            style={
+              styles.informationIcon
+            }
+          >
             <MaterialCommunityIcons
               name="calendar-month-outline"
               size={19}
@@ -187,7 +522,11 @@ export default function DashboardHeader() {
             />
           </View>
 
-          <Text style={styles.date}>
+          <Text
+            style={
+              styles.date
+            }
+          >
             {date}
           </Text>
         </View>
@@ -196,225 +535,376 @@ export default function DashboardHeader() {
   );
 }
 
-const styles = StyleSheet.create({
-  brandRow: {
-    marginTop: 46,
-    marginBottom: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+const styles =
+  StyleSheet.create({
+    brandRow: {
+      marginTop: 46,
+      marginBottom: 18,
 
-  brand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+      flexDirection:
+        'row',
 
-  brandIcon: {
-    width: 45,
-    height: 45,
-    borderRadius: 15,
-    backgroundColor: '#EEF5E9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
+      alignItems:
+        'center',
 
-  brandName: {
-    color: '#182334',
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: 0.7,
-  },
-
-  brandSubtitle: {
-    marginTop: 1,
-    color: '#657083',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-
-  notificationButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 3,
+      justifyContent:
+        'space-between',
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 7,
-  },
 
-  notificationDot: {
-    position: 'absolute',
-    top: 8,
-    right: 9,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: '#FF6638',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
+    brand: {
+      flexDirection:
+        'row',
 
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 27,
-    paddingHorizontal: 20,
-    paddingTop: 22,
-    paddingBottom: 19,
-    borderWidth: 1,
-    borderColor: '#F0F0ED',
-    marginBottom: 25,
-    elevation: 5,
-
-    shadowColor: '#1D2735',
-    shadowOffset: {
-      width: 0,
-      height: 5,
+      alignItems:
+        'center',
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 11,
-  },
 
-  mainRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+    brandIcon: {
+      width: 45,
+      height: 45,
 
-  userContent: {
-    flex: 1,
-    paddingRight: 10,
-  },
+      borderRadius: 15,
 
-  greetingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
+      backgroundColor:
+        '#EEF5E9',
 
-  greeting: {
-    color: '#596477',
-    fontSize: 16,
-    fontWeight: '500',
-  },
+      justifyContent:
+        'center',
 
-  name: {
-    marginTop: 7,
-    color: '#111B2B',
-    fontSize: 31,
-    lineHeight: 37,
-    fontWeight: '900',
-  },
+      alignItems:
+        'center',
 
-  message: {
-    marginTop: 5,
-    color: '#637083',
-    fontSize: 13,
-    lineHeight: 19,
-  },
+      marginRight: 10,
+    },
 
-  avatarBorder: {
-    width: 79,
-    height: 79,
-    borderRadius: 40,
-    borderWidth: 5,
-    borderColor: '#FFE3D8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
+    brandName: {
+      color:
+        '#182334',
 
-  avatar: {
-    width: 65,
-    height: 65,
-    borderRadius: 33,
-    backgroundColor: '#FF7048',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+      fontSize: 18,
 
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '800',
-  },
+      fontWeight:
+        '900',
 
-  avatarDecoration: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-  },
+      letterSpacing: 0.7,
+    },
 
-  informationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20,
-  },
+    brandSubtitle: {
+      marginTop: 1,
 
-  informationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
+      color:
+        '#657083',
 
-  informationIcon: {
-    width: 35,
-    height: 35,
-    borderRadius: 11,
-    backgroundColor: '#F1F4E9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 9,
-  },
+      fontSize: 10,
 
-  informationText: {
-    color: '#202938',
-    fontSize: 13,
-    fontWeight: '600',
-    flexShrink: 1,
-  },
+      fontWeight:
+        '700',
 
-  verticalDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: '#E8E9E7',
-    marginHorizontal: 12,
-  },
+      letterSpacing: 0.5,
+    },
 
-  horizontalDivider: {
-    height: 1,
-    backgroundColor: '#EBECEA',
-    marginTop: 17,
-    marginBottom: 14,
-  },
+    notificationButton: {
+      width: 48,
+      height: 48,
 
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+      borderRadius: 16,
 
-  date: {
-    color: '#626D7F',
-    fontSize: 13,
-    fontWeight: '500',
-    flex: 1,
-  },
+      backgroundColor:
+        '#FFFFFF',
 
-  pressed: {
-    opacity: 0.75,
-    transform: [
-      {
-        scale: 0.96,
+      justifyContent:
+        'center',
+
+      alignItems:
+        'center',
+
+      elevation: 4,
+
+      shadowColor:
+        '#000',
+
+      shadowOffset: {
+        width: 0,
+        height: 3,
       },
-    ],
-  },
-});
+
+      shadowOpacity:
+        0.08,
+
+      shadowRadius: 7,
+    },
+
+    notificationDot: {
+      position:
+        'absolute',
+
+      top: 8,
+      right: 9,
+
+      width: 10,
+      height: 10,
+
+      borderRadius: 5,
+
+      backgroundColor:
+        '#FF6638',
+
+      borderWidth: 2,
+
+      borderColor:
+        '#FFFFFF',
+    },
+
+    card: {
+      backgroundColor:
+        '#FFFFFF',
+
+      borderRadius: 27,
+
+      paddingHorizontal: 20,
+
+      paddingTop: 22,
+
+      paddingBottom: 19,
+
+      borderWidth: 1,
+
+      borderColor:
+        '#F0F0ED',
+
+      marginBottom: 25,
+
+      elevation: 5,
+
+      shadowColor:
+        '#1D2735',
+
+      shadowOffset: {
+        width: 0,
+        height: 5,
+      },
+
+      shadowOpacity:
+        0.08,
+
+      shadowRadius: 11,
+    },
+
+    mainRow: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+    },
+
+    userContent: {
+      flex: 1,
+
+      paddingRight: 10,
+    },
+
+    greetingRow: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap: 7,
+    },
+
+    greeting: {
+      color:
+        '#596477',
+
+      fontSize: 16,
+
+      fontWeight:
+        '500',
+    },
+
+    name: {
+      marginTop: 7,
+
+      color:
+        '#111B2B',
+
+      fontSize: 31,
+
+      lineHeight: 37,
+
+      fontWeight:
+        '900',
+    },
+
+    message: {
+      marginTop: 5,
+
+      color:
+        '#637083',
+
+      fontSize: 13,
+
+      lineHeight: 19,
+    },
+
+    avatarBorder: {
+      width: 79,
+      height: 79,
+
+      borderRadius: 40,
+
+      borderWidth: 5,
+
+      borderColor:
+        '#FFE3D8',
+
+      justifyContent:
+        'center',
+
+      alignItems:
+        'center',
+
+      position:
+        'relative',
+    },
+
+    avatar: {
+      width: 65,
+      height: 65,
+
+      borderRadius: 33,
+
+      backgroundColor:
+        '#FF7048',
+
+      justifyContent:
+        'center',
+
+      alignItems:
+        'center',
+    },
+
+    avatarText: {
+      color:
+        '#FFFFFF',
+
+      fontSize: 24,
+
+      fontWeight:
+        '800',
+    },
+
+    avatarDecoration: {
+      position:
+        'absolute',
+
+      top: -8,
+      right: -8,
+    },
+
+    informationRow: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      marginTop: 20,
+    },
+
+    informationItem: {
+      flex: 1,
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      flexShrink: 1,
+    },
+
+    informationIcon: {
+      width: 35,
+      height: 35,
+
+      borderRadius: 11,
+
+      backgroundColor:
+        '#F1F4E9',
+
+      justifyContent:
+        'center',
+
+      alignItems:
+        'center',
+
+      marginRight: 9,
+    },
+
+    informationText: {
+      color:
+        '#202938',
+
+      fontSize: 13,
+
+      fontWeight:
+        '600',
+
+      flexShrink: 1,
+    },
+
+    verticalDivider: {
+      width: 1,
+
+      height: 28,
+
+      backgroundColor:
+        '#E8E9E7',
+
+      marginHorizontal: 12,
+    },
+
+    horizontalDivider: {
+      height: 1,
+
+      backgroundColor:
+        '#EBECEA',
+
+      marginTop: 17,
+
+      marginBottom: 14,
+    },
+
+    dateRow: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+    },
+
+    date: {
+      color:
+        '#626D7F',
+
+      fontSize: 13,
+
+      fontWeight:
+        '500',
+
+      flex: 1,
+    },
+
+    pressed: {
+      opacity: 0.75,
+
+      transform: [
+        {
+          scale: 0.96,
+        },
+      ],
+    },
+  });

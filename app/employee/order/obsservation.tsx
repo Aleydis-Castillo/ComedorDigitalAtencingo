@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -65,15 +66,32 @@ function BackgroundFoodIcon({
 }
 
 export default function ObservationScreen() {
-  const {
-    observations,
-    setObservations,
-  } = useOrder();
+const {
+  dishId,
+  observations,
+  setObservations,
+} = useOrder();
 
-  const handleReviewOrder = () => {
-    setObservations(observations.trim());
-    router.push('/employee/order/summary');
-  };
+const handleReviewOrder = () => {
+  if (!dishId) {
+    Alert.alert(
+      'Pedido incompleto',
+      'Primero selecciona un platillo antes de continuar.',
+      [
+        {
+          text: 'Regresar',
+          onPress: () => router.back(),
+        },
+      ],
+    );
+
+    return;
+  }
+
+  setObservations(observations.trim());
+
+  router.push('/employee/order/summary');
+};
 
   return (
     <KeyboardAvoidingView

@@ -1,9 +1,14 @@
 import React, {
+  useCallback,
   useEffect,
   useMemo,
+  useState,
 } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,13 +18,54 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-import { COLORS } from '../../../constants/colors';
-
 import PrimaryButton from '../../../components/buttons/PrimaryButton';
 import FoodTypeCard from '../../../components/order/FoodTypeCard';
 import StepHeader from '../../../components/order/StepHeader';
 
+import { COLORS } from '../../../constants/colors';
 import { useOrder } from '../../../context/OrderContext';
+
+import { getMenu } from '../../../services/menuApi';
+
+import {
+  createEmptyWeeklyMenu,
+  FrontendDayKey,
+  mapApiMenuToWeeklyMenu,
+} from '../../../services/menuMapper';
+
+type FoodType = 'breakfast' | 'lunch';
+
+interface ServiceAvailability {
+  breakfast: boolean;
+  lunch: boolean;
+}
+
+function getCurrentDayKey(): FrontendDayKey | null {
+  const currentDay = new Date().getDay();
+
+  switch (currentDay) {
+    case 1:
+      return 'LUN';
+
+    case 2:
+      return 'MAR';
+
+    case 3:
+      return 'MIE';
+
+    case 4:
+      return 'JUE';
+
+    case 5:
+      return 'VIE';
+
+    case 6:
+      return 'SAB';
+
+    default:
+      return null;
+  }
+}
 
 export default function OrderScreen() {
   const {
@@ -27,58 +73,132 @@ export default function OrderScreen() {
     setFoodType,
   } = useOrder();
 
-  /*
-   * DATOS TEMPORALES
-   *
-   * Después estos valores vendrán desde la API y PostgreSQL.
-   * Un servicio estará disponible cuando tenga un menú activo
-   * y al menos un platillo disponible.
-   */
-  const serviceAvailability = useMemo(
-    () => ({
-      breakfast: true,
+  const [serviceAvailability, setServiceAvailability] =
+    useState<ServiceAvailability>({
+      breakfast: false,
       lunch: false,
-    }),
+    });
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [isRefreshing, setIsRefreshing] =
+    useState(false);
+
+  const currentDayKey = useMemo(
+    () => getCurrentDayKey(),
     [],
   );
 
-  /*
-   * Seleccionamos automáticamente el único servicio disponible.
-   *
-   * Cuando ambos estén disponibles, el usuario podrá escoger
-   * cualquiera de los dos.
-   */
+  const loadAvailableServices = useCallback(
+    async (showLoading = true) => {
+      try {
+        if (showLoading) {
+          setIsLoading(true);
+        }
+
+        const apiMenu = await getMenu();
+
+        const weeklyMenu =
+          mapApiMenuToWeeklyMenu(
+            apiMenu,
+            true,
+          );
+
+        if (!currentDayKey) {
+          setServiceAvailability({
+            breakfast: false,
+            lunch: false,
+          });
+
+          setFoodType(null);
+          return;
+        }
+
+        const currentMenu =
+          weeklyMenu[currentDayKey] ??
+          createEmptyWeeklyMenu()[currentDayKey];
+
+        const availability = {
+          breakfast:
+            currentMenu.breakfast.length > 0,
+
+          lunch:
+            currentMenu.lunch.length > 0,
+        };
+
+        setServiceAvailability(availability);
+
+        const availableServices: FoodType[] = [];
+
+        if (availability.breakfast) {
+          availableServices.push('breakfast');
+        }
+
+        if (availability.lunch) {
+          availableServices.push('lunch');
+        }
+
+        /*
+         * Si solamente hay un servicio disponible,
+         * lo seleccionamos automáticamente.
+         */
+        if (availableServices.length === 1) {
+          setFoodType(availableServices[0] ?? null);
+          return;
+        }
+
+        /*
+         * Quitamos una selección anterior si el servicio
+         * dejó de estar disponible.
+         */
+        if (
+          foodType === 'breakfast' &&
+          !availability.breakfast
+        ) {
+          setFoodType(null);
+        }
+
+        if (
+          foodType === 'lunch' &&
+          !availability.lunch
+        ) {
+          setFoodType(null);
+        }
+      } catch (error) {
+        console.error(
+          'Error al consultar los servicios:',
+          error,
+        );
+
+        setServiceAvailability({
+          breakfast: false,
+          lunch: false,
+        });
+
+        setFoodType(null);
+
+        Alert.alert(
+          'No fue posible cargar el menú',
+          error instanceof Error
+            ? error.message
+            : 'Revisa la conexión con el servidor.',
+        );
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [
+      currentDayKey,
+      foodType,
+      setFoodType,
+    ],
+  );
+
   useEffect(() => {
-    const availableServices = [
-      serviceAvailability.breakfast ? 'breakfast' : null,
-      serviceAvailability.lunch ? 'lunch' : null,
-    ].filter(Boolean);
-
-    if (availableServices.length === 1) {
-      setFoodType(
-        availableServices[0] as 'breakfast' | 'lunch',
-      );
-      return;
-    }
-
-    if (
-      foodType === 'breakfast' &&
-      !serviceAvailability.breakfast
-    ) {
-      setFoodType(null);
-    }
-
-    if (
-      foodType === 'lunch' &&
-      !serviceAvailability.lunch
-    ) {
-      setFoodType(null);
-    }
-  }, [
-    foodType,
-    serviceAvailability,
-    setFoodType,
-  ]);
+    loadAvailableServices();
+  }, [loadAvailableServices]);
 
   const hasAvailableService =
     serviceAvailability.breakfast ||
@@ -90,13 +210,60 @@ export default function OrderScreen() {
     (foodType === 'lunch' &&
       serviceAvailability.lunch);
 
+  const handleSelectService = (
+    service: FoodType,
+  ) => {
+    const isAvailable =
+      serviceAvailability[service];
+
+    if (!isAvailable) {
+      return;
+    }
+
+    /*
+     * Permite seleccionar y quitar la selección.
+     */
+    setFoodType(
+      foodType === service
+        ? null
+        : service,
+    );
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    loadAvailableServices(false);
+  };
+
   const handleContinue = () => {
     if (!validSelection) {
+      Alert.alert(
+        'Selecciona un servicio',
+        'Elige desayuno o comida para continuar.',
+      );
+
       return;
     }
 
     router.push('/employee/order/dish');
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color={COLORS.primary}
+          />
+
+          <Text style={styles.loadingText}>
+            Consultando servicios disponibles...
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -106,6 +273,14 @@ export default function OrderScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
+          />
+        }
       >
         <StepHeader
           title="¿Qué deseas pedir hoy?"
@@ -124,27 +299,37 @@ export default function OrderScreen() {
           </View>
 
           <Text style={styles.infoText}>
-            La disponibilidad depende del menú y de los
-            platillos registrados por el comedor.
+            La disponibilidad depende del menú publicado
+            y de los platillos registrados para hoy.
           </Text>
         </View>
 
         <FoodTypeCard
           icon="coffee-outline"
           title="Desayuno"
-          available={serviceAvailability.breakfast}
-          selected={foodType === 'breakfast'}
-          unavailableText="Servicio finalizado"
-          onPress={() => setFoodType('breakfast')}
+          available={
+            serviceAvailability.breakfast
+          }
+          selected={
+            foodType === 'breakfast'
+          }
+          unavailableText="Sin menú disponible"
+          onPress={() =>
+            handleSelectService('breakfast')
+          }
         />
 
         <FoodTypeCard
           icon="silverware-fork-knife"
           title="Comida"
-          available={serviceAvailability.lunch}
+          available={
+            serviceAvailability.lunch
+          }
           selected={foodType === 'lunch'}
-          unavailableText="Disponible próximamente"
-          onPress={() => setFoodType('lunch')}
+          unavailableText="Sin menú disponible"
+          onPress={() =>
+            handleSelectService('lunch')
+          }
         />
 
         {!hasAvailableService && (
@@ -160,8 +345,23 @@ export default function OrderScreen() {
             </Text>
 
             <Text style={styles.emptyStateText}>
-              El comedor todavía no ha registrado platillos
-              disponibles para realizar pedidos.
+              No existe un menú publicado con platillos
+              disponibles para el día de hoy.
+            </Text>
+          </View>
+        )}
+
+        {!currentDayKey && (
+          <View style={styles.weekendNotice}>
+            <MaterialCommunityIcons
+              name="calendar-remove-outline"
+              size={22}
+              color="#9B691A"
+            />
+
+            <Text style={styles.weekendNoticeText}>
+              El servicio del comedor funciona de lunes
+              a sábado.
             </Text>
           </View>
         )}
@@ -210,6 +410,21 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 90,
     backgroundColor: '#FFF0DF',
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+
+  loadingText: {
+    marginTop: 14,
+    color: COLORS.gray,
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 
   infoContainer: {
@@ -262,6 +477,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     textAlign: 'center',
+  },
+
+  weekendNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3DF',
+    borderRadius: 17,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#F5DFB8',
+  },
+
+  weekendNoticeText: {
+    flex: 1,
+    marginLeft: 10,
+    color: '#8A641F',
+    fontSize: 13,
+    lineHeight: 18,
   },
 
   buttonContainer: {

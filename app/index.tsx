@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 
 import { router } from 'expo-router';
+
 import { COLORS } from '../constants/colors';
 
 export default function Home() {
@@ -44,6 +45,21 @@ export default function Home() {
           Primer acceso
         </Text>
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.tabletButton}
+        onPress={() =>
+          router.push('/tablet')
+        }
+      >
+        <Text style={styles.tabletButtonText}>
+          Modo Tablet
+        </Text>
+
+        <Text style={styles.tabletHelper}>
+          Acceso temporal para pruebas
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -51,7 +67,8 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor:
+      COLORS.background,
     justifyContent: 'center',
     padding: 30,
   },
@@ -75,11 +92,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: COLORS.gray,
     textAlign: 'center',
-    marginBottom: 80,
+    marginBottom: 60,
   },
 
   button: {
-    backgroundColor: COLORS.primary,
+    backgroundColor:
+      COLORS.primary,
     padding: 18,
     borderRadius: 20,
     alignItems: 'center',
@@ -94,7 +112,8 @@ const styles = StyleSheet.create({
   outline: {
     marginTop: 20,
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor:
+      COLORS.primary,
     padding: 18,
     borderRadius: 20,
     alignItems: 'center',
@@ -104,5 +123,30 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: 'bold',
     fontSize: 18,
+  },
+
+  tabletButton: {
+    marginTop: 28,
+    paddingVertical: 15,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    backgroundColor:
+      '#E8F4EA',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor:
+      '#CFE5D2',
+  },
+
+  tabletButtonText: {
+    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  tabletHelper: {
+    marginTop: 3,
+    color: COLORS.gray,
+    fontSize: 11,
   },
 });

@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +19,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import DashboardBackground from '../../components/backgrounds/DashboardBackground';
 
-import { weeklyMenu } from '../../constants/mockData';
+import { getMenu } from '../../services/menuApi';
+
+import {
+  createEmptyWeeklyMenu,
+  FrontendDayKey,
+  FrontendDish,
+  FrontendWeeklyMenu,
+  mapApiMenuToWeeklyMenu,
+} from '../../services/menuMapper';
 
 const days = [
   { key: 'LUN', label: 'Lun' },
@@ -23,19 +38,14 @@ const days = [
   { key: 'SAB', label: 'Sáb' },
 ] as const;
 
-type DayKey = typeof days[number]['key'];
-
-interface Dish {
-  id: number;
-  name: string;
-}
+type DayKey = FrontendDayKey;
 
 interface MenuSectionProps {
   title: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   iconColor: string;
   iconBackground: string;
-  dishes: Dish[];
+  dishes: FrontendDish[];
 }
 
 function MenuSection({
@@ -54,9 +64,7 @@ function MenuSection({
           <View
             style={[
               styles.menuIcon,
-              {
-                backgroundColor: iconBackground,
-              },
+              { backgroundColor: iconBackground },
             ]}
           >
             <MaterialCommunityIcons
@@ -67,9 +75,7 @@ function MenuSection({
           </View>
 
           <View>
-            <Text style={styles.menuTitle}>
-              {title}
-            </Text>
+            <Text style={styles.menuTitle}>{title}</Text>
 
             <Text style={styles.menuCount}>
               {available
@@ -112,9 +118,7 @@ function MenuSection({
               },
             ]}
           >
-            {available
-              ? 'Disponible'
-              : 'No disponible'}
+            {available ? 'Disponible' : 'No disponible'}
           </Text>
         </View>
       </View>
@@ -134,26 +138,30 @@ function MenuSection({
             <View
               style={[
                 styles.dishNumber,
-                {
-                  backgroundColor: iconBackground,
-                },
+                { backgroundColor: iconBackground },
               ]}
             >
               <Text
                 style={[
                   styles.dishNumberText,
-                  {
-                    color: iconColor,
-                  },
+                  { color: iconColor },
                 ]}
               >
                 {index + 1}
               </Text>
             </View>
 
-            <Text style={styles.dishName}>
-              {dish.name}
-            </Text>
+            <View style={styles.dishInformation}>
+              <Text style={styles.dishName}>
+                {dish.name}
+              </Text>
+
+              {dish.description.length > 0 && (
+                <Text style={styles.dishDescription}>
+                  {dish.description}
+                </Text>
+              )}
+            </View>
           </View>
         ))
       ) : (
@@ -169,7 +177,7 @@ function MenuSection({
           </Text>
 
           <Text style={styles.emptyText}>
-            No hay platillos disponibles para este día.
+            No hay platillos publicados para este día.
           </Text>
         </View>
       )}
@@ -181,15 +189,77 @@ export default function WeeklyMenu() {
   const [selectedDay, setSelectedDay] =
     useState<DayKey>('LUN');
 
-  const menu =
-    weeklyMenu[
-      selectedDay as keyof typeof weeklyMenu
-    ];
+  const [weeklyMenu, setWeeklyMenu] =
+    useState<FrontendWeeklyMenu>(
+      createEmptyWeeklyMenu(),
+    );
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] =
+    useState(false);
+
+  const loadMenu = useCallback(
+    async (showLoading = true) => {
+      try {
+        if (showLoading) {
+          setIsLoading(true);
+        }
+
+        const apiMenu = await getMenu();
+        const mappedMenu = mapApiMenuToWeeklyMenu(
+          apiMenu,
+          true,
+        );
+
+        setWeeklyMenu(mappedMenu);
+      } catch (error) {
+        console.error('Error al cargar el menú:', error);
+
+        Alert.alert(
+          'No fue posible cargar el menú',
+          error instanceof Error
+            ? error.message
+            : 'Revisa la conexión con el servidor.',
+        );
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    loadMenu();
+  }, [loadMenu]);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    loadMenu(false);
+  };
+
+  const menu = weeklyMenu[selectedDay];
 
   const selectedDayLabel =
-    days.find(
-      (day) => day.key === selectedDay
-    )?.label ?? '';
+    days.find(day => day.key === selectedDay)
+      ?.label ?? '';
+
+  if (isLoading) {
+    return (
+      <DashboardBackground>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color="#4C8B32"
+          />
+
+          <Text style={styles.loadingText}>
+            Cargando menú semanal...
+          </Text>
+        </View>
+      </DashboardBackground>
+    );
+  }
 
   return (
     <DashboardBackground>
@@ -197,6 +267,14 @@ export default function WeeklyMenu() {
         style={styles.container}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={['#4C8B32']}
+            tintColor="#4C8B32"
+          />
+        }
       >
         <View style={styles.header}>
           <View style={styles.headerIcon}>
@@ -208,12 +286,10 @@ export default function WeeklyMenu() {
           </View>
 
           <View style={styles.headerText}>
-            <Text style={styles.title}>
-              Menú semanal
-            </Text>
+            <Text style={styles.title}>Menú semanal</Text>
 
             <Text style={styles.subtitle}>
-              Consulta los platillos disponibles de cada día.
+              Consulta los platillos publicados de cada día.
             </Text>
           </View>
         </View>
@@ -224,38 +300,37 @@ export default function WeeklyMenu() {
           contentContainerStyle={styles.daysContent}
           style={styles.daysContainer}
         >
-          {days.map((day) => {
-            const selected =
-              selectedDay === day.key;
+          {days.map(day => {
+            const selected = selectedDay === day.key;
+            const dayHasMenu =
+              weeklyMenu[day.key].breakfast.length > 0 ||
+              weeklyMenu[day.key].lunch.length > 0;
 
             return (
               <Pressable
                 key={day.key}
-                onPress={() =>
-                  setSelectedDay(day.key)
-                }
+                onPress={() => setSelectedDay(day.key)}
                 style={({ pressed }) => [
                   styles.dayButton,
-                  selected &&
-                    styles.selectedDayButton,
-                  pressed &&
-                    styles.dayButtonPressed,
+                  selected && styles.selectedDayButton,
+                  pressed && styles.dayButtonPressed,
                 ]}
               >
                 <Text
                   style={[
                     styles.dayText,
-                    selected &&
-                      styles.selectedDayText,
+                    selected && styles.selectedDayText,
                   ]}
                 >
                   {day.label}
                 </Text>
 
                 {selected && (
-                  <View
-                    style={styles.selectedIndicator}
-                  />
+                  <View style={styles.selectedIndicator} />
+                )}
+
+                {dayHasMenu && !selected && (
+                  <View style={styles.menuDayIndicator} />
                 )}
               </Pressable>
             );
@@ -570,5 +645,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     textAlign: 'center',
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+
+  loadingText: {
+    marginTop: 14,
+    color: '#687284',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  dishInformation: {
+    flex: 1,
+  },
+
+  dishDescription: {
+    marginTop: 3,
+    color: '#7A8390',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+
+  menuDayIndicator: {
+    position: 'absolute',
+    bottom: 7,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#4C8B32',
   },
 });

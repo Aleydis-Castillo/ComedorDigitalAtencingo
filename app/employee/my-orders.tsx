@@ -1,99 +1,146 @@
-import React from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
 import {
-    FlatList,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import DashboardBackground from '../../components/backgrounds/DashboardBackground';
 
-interface Order {
-  id: number;
-  folio: string;
-  date: string;
-  foodType: 'Desayuno' | 'Comida';
-  dish: string;
-  deliveryType: 'Comedor' | 'Oficina';
-  status: 'Pendiente' | 'Confirmado' | 'Entregado' | 'Cancelado';
+import { useAuth } from '../../context/AuthContext';
+
+import {
+  getUserOrders,
+  UserOrder,
+} from '../../services/orderApi';
+
+type DisplayStatus =
+  | 'Pendiente'
+  | 'Preparando'
+  | 'Listo'
+  | 'Entregado'
+  | 'Cancelado';
+
+function translateStatus(
+  status: UserOrder['status'],
+): DisplayStatus {
+  switch (status) {
+    case 'PENDING':
+      return 'Pendiente';
+
+    case 'PREPARING':
+      return 'Preparando';
+
+    case 'READY':
+      return 'Listo';
+
+    case 'DELIVERED':
+      return 'Entregado';
+
+    case 'CANCELLED':
+      return 'Cancelado';
+  }
 }
 
-const orders: Order[] = [
-  {
-    id: 1,
-    folio: 'ATN-260723-4821',
-    date: '23 de julio de 2026',
-    foodType: 'Comida',
-    dish: 'Pollo en salsa verde',
-    deliveryType: 'Comedor',
-    status: 'Pendiente',
-  },
-  {
-    id: 2,
-    folio: 'ATN-260722-3157',
-    date: '22 de julio de 2026',
-    foodType: 'Desayuno',
-    dish: 'Huevos con frijoles',
-    deliveryType: 'Oficina',
-    status: 'Entregado',
-  },
-  {
-    id: 3,
-    folio: 'ATN-260721-9084',
-    date: '21 de julio de 2026',
-    foodType: 'Comida',
-    dish: 'Mole poblano con arroz',
-    deliveryType: 'Comedor',
-    status: 'Confirmado',
-  },
-];
-
-function getStatusStyle(status: Order['status']) {
+function getStatusStyle(
+  status: DisplayStatus,
+) {
   switch (status) {
     case 'Pendiente':
       return {
         color: '#D97706',
         backgroundColor: '#FFF4D8',
-        icon: 'clock-outline' as const,
+        icon:
+          'clock-outline' as const,
       };
 
-    case 'Confirmado':
+    case 'Preparando':
+      return {
+        color: '#C46A19',
+        backgroundColor: '#FFF0DF',
+        icon:
+          'chef-hat' as const,
+      };
+
+    case 'Listo':
       return {
         color: '#2563A9',
         backgroundColor: '#EAF3FA',
-        icon: 'check-circle-outline' as const,
+        icon:
+          'check-circle-outline' as const,
       };
 
     case 'Entregado':
       return {
         color: '#438B32',
         backgroundColor: '#EEF6E9',
-        icon: 'package-variant-closed-check' as const,
+        icon:
+          'package-variant-closed-check' as const,
       };
 
     case 'Cancelado':
       return {
         color: '#C2413A',
         backgroundColor: '#FDECEA',
-        icon: 'close-circle-outline' as const,
+        icon:
+          'close-circle-outline' as const,
       };
   }
+}
+
+function formatDate(
+  dateValue: string,
+) {
+  const date = new Date(dateValue);
+
+  return date.toLocaleDateString(
+    'es-MX',
+    {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    },
+  );
 }
 
 function OrderCard({
   order,
 }: {
-  order: Order;
+  order: UserOrder;
 }) {
-  const statusStyle = getStatusStyle(order.status);
+  const status =
+    translateStatus(order.status);
+
+  const statusStyle =
+    getStatusStyle(status);
+
+  const foodType =
+    order.service === 'BREAKFAST'
+      ? 'Desayuno'
+      : 'Comida';
+
+  const deliveryType =
+    order.deliveryType ===
+    'CAFETERIA'
+      ? 'Comedor'
+      : 'Oficina';
 
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <View>
+        <View style={styles.folioContainer}>
           <Text style={styles.folioLabel}>
             FOLIO
           </Text>
@@ -122,11 +169,12 @@ function OrderCard({
             style={[
               styles.statusText,
               {
-                color: statusStyle.color,
+                color:
+                  statusStyle.color,
               },
             ]}
           >
-            {order.status}
+            {status}
           </Text>
         </View>
       </View>
@@ -148,7 +196,9 @@ function OrderCard({
           </Text>
 
           <Text style={styles.infoValue}>
-            {order.date}
+            {formatDate(
+              order.orderedFor,
+            )}
           </Text>
         </View>
       </View>
@@ -157,7 +207,8 @@ function OrderCard({
         <View style={styles.iconContainer}>
           <MaterialCommunityIcons
             name={
-              order.foodType === 'Desayuno'
+              order.service ===
+              'BREAKFAST'
                 ? 'coffee-outline'
                 : 'silverware-fork-knife'
             }
@@ -172,7 +223,7 @@ function OrderCard({
           </Text>
 
           <Text style={styles.infoValue}>
-            {order.foodType}
+            {foodType}
           </Text>
         </View>
       </View>
@@ -192,8 +243,18 @@ function OrderCard({
           </Text>
 
           <Text style={styles.infoValue}>
-            {order.dish}
+            {order.dish.name}
           </Text>
+
+          {!!order.dish.description && (
+            <Text
+              style={
+                styles.description
+              }
+            >
+              {order.dish.description}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -201,7 +262,8 @@ function OrderCard({
         <View style={styles.iconContainer}>
           <MaterialCommunityIcons
             name={
-              order.deliveryType === 'Oficina'
+              order.deliveryType ===
+              'OFFICE'
                 ? 'truck-delivery-outline'
                 : 'storefront-outline'
             }
@@ -216,27 +278,254 @@ function OrderCard({
           </Text>
 
           <Text style={styles.infoValue}>
-            {order.deliveryType}
+            {deliveryType}
           </Text>
         </View>
       </View>
+
+      {order.deliveryType ===
+        'OFFICE' && (
+        <>
+          {!!order.zone && (
+            <View style={styles.infoRow}>
+              <View
+                style={
+                  styles.iconContainer
+                }
+              >
+                <MaterialCommunityIcons
+                  name="map-marker-radius-outline"
+                  size={20}
+                  color="#576174"
+                />
+              </View>
+
+              <View
+                style={
+                  styles.infoContent
+                }
+              >
+                <Text
+                  style={
+                    styles.infoLabel
+                  }
+                >
+                  Zona
+                </Text>
+
+                <Text
+                  style={
+                    styles.infoValue
+                  }
+                >
+                  {order.zone}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {!!order.location && (
+            <View style={styles.infoRow}>
+              <View
+                style={
+                  styles.iconContainer
+                }
+              >
+                <MaterialCommunityIcons
+                  name="map-marker-outline"
+                  size={20}
+                  color="#576174"
+                />
+              </View>
+
+              <View
+                style={
+                  styles.infoContent
+                }
+              >
+                <Text
+                  style={
+                    styles.infoLabel
+                  }
+                >
+                  Ubicación
+                </Text>
+
+                <Text
+                  style={
+                    styles.infoValue
+                  }
+                >
+                  {order.location}
+                </Text>
+              </View>
+            </View>
+          )}
+        </>
+      )}
+
+      {!!order.observations && (
+        <View
+          style={
+            styles.observationsCard
+          }
+        >
+          <MaterialCommunityIcons
+            name="message-text-outline"
+            size={20}
+            color="#697386"
+          />
+
+          <View
+            style={
+              styles.observationsContent
+            }
+          >
+            <Text
+              style={
+                styles.observationsLabel
+              }
+            >
+              Observaciones
+            </Text>
+
+            <Text
+              style={
+                styles.observationsText
+              }
+            >
+              {order.observations}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 export default function MyOrdersScreen() {
+  const { user } = useAuth();
+
+  const [orders, setOrders] =
+    useState<UserOrder[]>([]);
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [isRefreshing, setIsRefreshing] =
+    useState(false);
+
+  const loadOrders = useCallback(
+    async (
+      showLoading = true,
+    ) => {
+      if (!user?.id) {
+        setOrders([]);
+        setIsLoading(false);
+        setIsRefreshing(false);
+
+        return;
+      }
+
+      try {
+        if (showLoading) {
+          setIsLoading(true);
+        }
+
+        const userOrders =
+          await getUserOrders(
+            user.id,
+          );
+
+        setOrders(userOrders);
+      } catch (error) {
+        console.error(
+          'Error al consultar pedidos:',
+          error,
+        );
+
+        Alert.alert(
+          'No fue posible cargar tus pedidos',
+          error instanceof Error
+            ? error.message
+            : 'Ocurrió un error inesperado.',
+        );
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [user?.id],
+  );
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    loadOrders(false);
+  };
+
+  if (isLoading) {
+    return (
+      <DashboardBackground>
+        <View
+          style={
+            styles.loadingContainer
+          }
+        >
+          <ActivityIndicator
+            size="large"
+            color="#3679AD"
+          />
+
+          <Text
+            style={
+              styles.loadingText
+            }
+          >
+            Consultando tus pedidos...
+          </Text>
+        </View>
+      </DashboardBackground>
+    );
+  }
+
   return (
     <DashboardBackground>
       <FlatList
         data={orders}
-        keyExtractor={(item) =>
-          item.id.toString()
+        keyExtractor={item =>
+          item.id
         }
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={
+          false
+        }
+        contentContainerStyle={[
+          styles.content,
+          orders.length === 0 &&
+            styles.emptyContent,
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={
+              isRefreshing
+            }
+            onRefresh={
+              handleRefresh
+            }
+            colors={['#3679AD']}
+            tintColor="#3679AD"
+          />
+        }
         ListHeaderComponent={
           <View style={styles.header}>
-            <View style={styles.headerIcon}>
+            <View
+              style={
+                styles.headerIcon
+              }
+            >
               <MaterialCommunityIcons
                 name="clipboard-text-outline"
                 size={28}
@@ -244,36 +533,60 @@ export default function MyOrdersScreen() {
               />
             </View>
 
-            <View style={styles.headerText}>
-              <Text style={styles.title}>
+            <View
+              style={
+                styles.headerText
+              }
+            >
+              <Text
+                style={styles.title}
+              >
                 Mis pedidos
               </Text>
 
-              <Text style={styles.subtitle}>
+              <Text
+                style={
+                  styles.subtitle
+                }
+              >
                 Consulta el historial y el estado de tus pedidos.
               </Text>
             </View>
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.emptyCard}>
+          <View
+            style={
+              styles.emptyCard
+            }
+          >
             <MaterialCommunityIcons
               name="clipboard-text-off-outline"
               size={50}
               color="#A0A7B2"
             />
 
-            <Text style={styles.emptyTitle}>
+            <Text
+              style={
+                styles.emptyTitle
+              }
+            >
               Aún no tienes pedidos
             </Text>
 
-            <Text style={styles.emptyText}>
+            <Text
+              style={
+                styles.emptyText
+              }
+            >
               Cuando realices uno aparecerá aquí.
             </Text>
           </View>
         }
         renderItem={({ item }) => (
-          <OrderCard order={item} />
+          <OrderCard
+            order={item}
+          />
         )}
       />
     </DashboardBackground>
@@ -285,6 +598,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 55,
     paddingBottom: 40,
+  },
+
+  emptyContent: {
+    flexGrow: 1,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+
+  loadingText: {
+    marginTop: 14,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#687284',
   },
 
   header: {
@@ -342,8 +673,13 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent:
+      'space-between',
     gap: 10,
+  },
+
+  folioContainer: {
+    flex: 1,
   },
 
   folioLabel: {
@@ -410,6 +746,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#202938',
+  },
+
+  description: {
+    marginTop: 3,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#7A8390',
+  },
+
+  observationsCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F7F8F6',
+    borderRadius: 16,
+    padding: 13,
+    marginTop: 3,
+  },
+
+  observationsContent: {
+    flex: 1,
+    marginLeft: 10,
+  },
+
+  observationsLabel: {
+    fontSize: 11,
+    color: '#9299A5',
+    marginBottom: 3,
+  },
+
+  observationsText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#465060',
   },
 
   emptyCard: {

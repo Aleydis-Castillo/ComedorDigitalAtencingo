@@ -1,24 +1,40 @@
-import React, { useMemo, useState } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { COLORS } from '../../constants/colors';
+import {
+  getMenu,
+  publishMenu,
+  saveMenu,
+} from '../../services/menuApi';
 
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 type ServiceType = 'breakfast' | 'lunch';
-type DayId = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+type ApiServiceType = 'BREAKFAST' | 'LUNCH';
+type DayId =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday';
 
 interface DayOption {
   id: DayId;
@@ -38,6 +54,21 @@ interface DayMenu {
 }
 
 type WeeklyMenu = Record<DayId, DayMenu>;
+
+interface ApiDish {
+  id: string;
+  name: string;
+  description: string | null;
+  service: ApiServiceType;
+  position: number;
+}
+
+interface ApiMenuDay {
+  id: string;
+  date: string;
+  published: boolean;
+  dishes: ApiDish[];
+}
 
 const DAYS: DayOption[] = [
   {
@@ -72,169 +103,103 @@ const DAYS: DayOption[] = [
   },
 ];
 
-const INITIAL_MENU: WeeklyMenu = {
+const createEmptyDishes = (): Dish[] => [
+  {
+    id: 1,
+    name: '',
+    description: '',
+  },
+  {
+    id: 2,
+    name: '',
+    description: '',
+  },
+];
+
+const createEmptyWeeklyMenu = (): WeeklyMenu => ({
   monday: {
-    breakfast: [
-      {
-        id: 1,
-        name: 'Chilaquiles verdes',
-        description: 'Con pollo, crema, queso y frijoles.',
-      },
-      {
-        id: 2,
-        name: 'Huevos con jamón',
-        description: 'Acompañados de frijoles y tortillas.',
-      },
-    ],
-    lunch: [
-      {
-        id: 1,
-        name: 'Pollo en mole',
-        description: 'Con arroz, frijoles y tortillas.',
-      },
-      {
-        id: 2,
-        name: 'Carne en salsa verde',
-        description: 'Con arroz, frijoles y tortillas.',
-      },
-    ],
+    breakfast: createEmptyDishes(),
+    lunch: createEmptyDishes(),
   },
-
   tuesday: {
-    breakfast: [
-      {
-        id: 1,
-        name: 'Enfrijoladas',
-        description: 'Con queso, crema y pollo.',
-      },
-      {
-        id: 2,
-        name: 'Huevos a la mexicana',
-        description: 'Con frijoles y tortillas.',
-      },
-    ],
-    lunch: [
-      {
-        id: 1,
-        name: 'Milanesa de pollo',
-        description: 'Con ensalada, arroz y tortillas.',
-      },
-      {
-        id: 2,
-        name: 'Cerdo en adobo',
-        description: 'Con arroz, frijoles y tortillas.',
-      },
-    ],
+    breakfast: createEmptyDishes(),
+    lunch: createEmptyDishes(),
   },
-
   wednesday: {
-    breakfast: [
-      {
-        id: 1,
-        name: 'Molletes',
-        description: 'Con pico de gallo y salsa.',
-      },
-      {
-        id: 2,
-        name: 'Hot cakes',
-        description: 'Con fruta y miel.',
-      },
-    ],
-    lunch: [
-      {
-        id: 1,
-        name: 'Pollo a la jardinera',
-        description: 'Con verduras, arroz y tortillas.',
-      },
-      {
-        id: 2,
-        name: 'Albóndigas',
-        description: 'En salsa de jitomate con arroz.',
-      },
-    ],
+    breakfast: createEmptyDishes(),
+    lunch: createEmptyDishes(),
   },
-
   thursday: {
-    breakfast: [
-      {
-        id: 1,
-        name: 'Quesadillas',
-        description: 'Con queso, guisado y salsa.',
-      },
-      {
-        id: 2,
-        name: 'Huevos divorciados',
-        description: 'Con frijoles y tortillas.',
-      },
-    ],
-    lunch: [
-      {
-        id: 1,
-        name: 'Tinga de pollo',
-        description: 'Con arroz, frijoles y tostadas.',
-      },
-      {
-        id: 2,
-        name: 'Bistec encebollado',
-        description: 'Con nopales, frijoles y tortillas.',
-      },
-    ],
+    breakfast: createEmptyDishes(),
+    lunch: createEmptyDishes(),
   },
-
   friday: {
-    breakfast: [
-      {
-        id: 1,
-        name: 'Tacos dorados',
-        description: 'Con lechuga, crema, queso y salsa.',
-      },
-      {
-        id: 2,
-        name: 'Omelette de jamón',
-        description: 'Con frijoles y tortillas.',
-      },
-    ],
-    lunch: [
-      {
-        id: 1,
-        name: 'Pescado empanizado',
-        description: 'Con ensalada y arroz.',
-      },
-      {
-        id: 2,
-        name: 'Pollo en salsa roja',
-        description: 'Con arroz, frijoles y tortillas.',
-      },
-    ],
+    breakfast: createEmptyDishes(),
+    lunch: createEmptyDishes(),
   },
-
   saturday: {
-    breakfast: [
-      {
-        id: 1,
-        name: 'Chilaquiles rojos',
-        description: 'Con pollo, crema, queso y frijoles.',
-      },
-      {
-        id: 2,
-        name: 'Huevos rancheros',
-        description: 'Con frijoles y tortillas.',
-      },
-    ],
-    lunch: [
-      {
-        id: 1,
-        name: 'Pozole',
-        description: 'Con lechuga, rábano, cebolla y tostadas.',
-      },
-      {
-        id: 2,
-        name: 'Pollo asado',
-        description: 'Con ensalada, arroz y tortillas.',
-      },
-    ],
+    breakfast: createEmptyDishes(),
+    lunch: createEmptyDishes(),
   },
-};
+});
+
+function formatDateForApi(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function getNextMonday() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const currentDay = today.getDay();
+  const daysUntilMonday = currentDay === 0
+    ? 1
+    : 8 - currentDay;
+
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + daysUntilMonday);
+
+  return monday;
+}
+
+function getWeekDates() {
+  const monday = getNextMonday();
+
+  return DAYS.reduce<Record<DayId, Date>>(
+    (dates, day, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      dates[day.id] = date;
+      return dates;
+    },
+    {} as Record<DayId, Date>,
+  );
+}
+
+function normalizeApiDishes(
+  dishes: ApiDish[],
+  service: ApiServiceType,
+): Dish[] {
+  const serviceDishes = dishes
+    .filter((dish) => dish.service === service)
+    .sort((a, b) => a.position - b.position);
+
+  return [1, 2].map((position) => {
+    const dish = serviceDishes.find(
+      (item) => item.position === position,
+    );
+
+    return {
+      id: position,
+      name: dish?.name ?? '',
+      description: dish?.description ?? '',
+    };
+  });
+}
 
 interface ServiceButtonProps {
   title: string;
@@ -413,19 +378,106 @@ export default function WeeklyMenuManagerScreen() {
     useState<ServiceType>('breakfast');
 
   const [weeklyMenu, setWeeklyMenu] =
-    useState<WeeklyMenu>(INITIAL_MENU);
+    useState<WeeklyMenu>(createEmptyWeeklyMenu);
 
   const [hasChanges, setHasChanges] =
     useState(false);
 
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [isSaving, setIsSaving] =
+    useState(false);
+
+  const [isPublishing, setIsPublishing] =
+    useState(false);
+
+  const weekDates = useMemo(
+    () => getWeekDates(),
+    [],
+  );
+
   const selectedDayInformation = useMemo(
-    () =>
-      DAYS.find((day) => day.id === selectedDay),
+    () => DAYS.find((day) => day.id === selectedDay),
     [selectedDay],
   );
 
   const currentDishes =
     weeklyMenu[selectedDay][selectedService];
+
+  const loadMenu = async () => {
+    try {
+      setIsLoading(true);
+
+      const apiMenu = await getMenu() as ApiMenuDay[];
+      const nextMenu = createEmptyWeeklyMenu();
+
+      DAYS.forEach((day) => {
+        const dateKey = formatDateForApi(
+          weekDates[day.id],
+        );
+
+        const apiDay = apiMenu.find(
+          (item) => item.date.slice(0, 10) === dateKey,
+        );
+
+        if (!apiDay) {
+          return;
+        }
+
+        nextMenu[day.id] = {
+          breakfast: normalizeApiDishes(
+            apiDay.dishes,
+            'BREAKFAST',
+          ),
+          lunch: normalizeApiDishes(
+            apiDay.dishes,
+            'LUNCH',
+          ),
+        };
+      });
+
+      setWeeklyMenu(nextMenu);
+      setHasChanges(false);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No fue posible obtener el menú.';
+
+      Alert.alert('Error', message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadMenu();
+  }, []);
+
+  const handleSelectDay = (day: DayId) => {
+    if (hasChanges) {
+      Alert.alert(
+        'Cambios sin guardar',
+        'Guarda los cambios actuales antes de seleccionar otro día.',
+      );
+      return;
+    }
+
+    setSelectedDay(day);
+  };
+
+  const handleSelectService = (service: ServiceType) => {
+    if (hasChanges) {
+      Alert.alert(
+        'Cambios sin guardar',
+        'Guarda los cambios actuales antes de cambiar de servicio.',
+      );
+      return;
+    }
+
+    setSelectedService(service);
+  };
 
   const updateDish = (
     dishIndex: number,
@@ -498,30 +550,86 @@ export default function WeeklyMenuManagerScreen() {
     return true;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!hasChanges || isSaving) {
+      return;
+    }
+
     if (!validateMenu()) {
       return;
     }
 
-    setHasChanges(false);
+    try {
+      setIsSaving(true);
 
-    Alert.alert(
-      'Cambios guardados',
-      `El menú del ${selectedDayInformation?.fullName.toLowerCase()} fue actualizado correctamente.`,
-    );
+      const date = formatDateForApi(
+        weekDates[selectedDay],
+      );
 
-    /*
-      Más adelante sustituiremos esta alerta por una petición
-      al backend de PostgreSQL.
+      const apiService: ApiServiceType =
+        selectedService === 'breakfast'
+          ? 'BREAKFAST'
+          : 'LUNCH';
 
-      Ejemplo:
+      await saveMenu(
+        date,
+        apiService,
+        currentDishes.map((dish) => ({
+          name: dish.name.trim(),
+          description: dish.description.trim(),
+        })),
+      );
 
-      await updateMenu({
-        day: selectedDay,
-        service: selectedService,
-        dishes: currentDishes,
-      });
-    */
+      setHasChanges(false);
+
+      Alert.alert(
+        'Cambios guardados',
+        `El menú del ${selectedDayInformation?.fullName.toLowerCase()} fue actualizado correctamente.`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No fue posible guardar el menú.';
+
+      Alert.alert('Error al guardar', message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const confirmPublishMenu = async () => {
+    try {
+      setIsPublishing(true);
+
+      const startDate = formatDateForApi(
+        weekDates.monday,
+      );
+      const endDate = formatDateForApi(
+        weekDates.saturday,
+      );
+
+      const result = await publishMenu(
+        startDate,
+        endDate,
+      );
+
+      Alert.alert(
+        'Menú publicado',
+        result.updatedDays > 0
+          ? `Se publicaron ${result.updatedDays} días del menú semanal.`
+          : 'No hay días guardados para publicar. Guarda primero los platillos de la semana.',
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No fue posible publicar el menú.';
+
+      Alert.alert('Error al publicar', message);
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   const handlePublishMenu = () => {
@@ -536,7 +644,7 @@ export default function WeeklyMenuManagerScreen() {
 
     Alert.alert(
       'Publicar menú semanal',
-      'El menú estará disponible para todos los empleados. ¿Deseas continuar?',
+      'El menú guardado estará disponible para todos los empleados. ¿Deseas continuar?',
       [
         {
           text: 'Cancelar',
@@ -544,12 +652,7 @@ export default function WeeklyMenuManagerScreen() {
         },
         {
           text: 'Publicar',
-          onPress: () => {
-            Alert.alert(
-              'Menú publicado',
-              'El menú semanal está disponible para los empleados.',
-            );
-          },
+          onPress: confirmPublishMenu,
         },
       ],
     );
@@ -664,11 +767,15 @@ export default function WeeklyMenuManagerScreen() {
 
           <View style={styles.informationContent}>
             <Text style={styles.informationTitle}>
-              Edita el menú
+              {isLoading
+                ? 'Cargando menú...'
+                : 'Edita el menú'}
             </Text>
 
             <Text style={styles.informationText}>
-              Selecciona un día y un servicio para modificar sus dos platillos.
+              {isLoading
+                ? 'Estamos consultando los platillos guardados en PostgreSQL.'
+                : 'Selecciona un día y un servicio para modificar sus dos platillos.'}
             </Text>
           </View>
         </View>
@@ -680,7 +787,7 @@ export default function WeeklyMenuManagerScreen() {
             </Text>
 
             <Text style={styles.sectionSubtitle}>
-              Semana de lunes a sábado
+              Próxima semana, de lunes a sábado
             </Text>
           </View>
 
@@ -701,19 +808,18 @@ export default function WeeklyMenuManagerScreen() {
           contentContainerStyle={styles.daysContainer}
         >
           {DAYS.map((day) => {
-            const isSelected =
-              selectedDay === day.id;
+            const isSelected = selectedDay === day.id;
 
             return (
               <TouchableOpacity
                 key={day.id}
                 activeOpacity={0.8}
+                disabled={isLoading || isSaving}
                 style={[
                   styles.dayButton,
-                  isSelected &&
-                    styles.dayButtonSelected,
+                  isSelected && styles.dayButtonSelected,
                 ]}
-                onPress={() => setSelectedDay(day.id)}
+                onPress={() => handleSelectDay(day.id)}
               >
                 <Text
                   style={[
@@ -732,9 +838,7 @@ export default function WeeklyMenuManagerScreen() {
                       styles.dayNumberSelected,
                   ]}
                 >
-                  {DAYS.findIndex(
-                    (item) => item.id === day.id,
-                  ) + 1}
+                  {weekDates[day.id].getDate()}
                 </Text>
               </TouchableOpacity>
             );
@@ -756,7 +860,14 @@ export default function WeeklyMenuManagerScreen() {
             </Text>
 
             <Text style={styles.selectedDayTitle}>
-              {selectedDayInformation?.fullName}
+              {selectedDayInformation?.fullName} ·{' '}
+              {weekDates[selectedDay].toLocaleDateString(
+                'es-MX',
+                {
+                  day: '2-digit',
+                  month: 'short',
+                },
+              )}
             </Text>
           </View>
 
@@ -775,12 +886,8 @@ export default function WeeklyMenuManagerScreen() {
           title="Desayuno"
           subtitle="Primer servicio del día"
           icon="food-croissant"
-          selected={
-            selectedService === 'breakfast'
-          }
-          onPress={() =>
-            setSelectedService('breakfast')
-          }
+          selected={selectedService === 'breakfast'}
+          onPress={() => handleSelectService('breakfast')}
         />
 
         <ServiceButton
@@ -788,9 +895,7 @@ export default function WeeklyMenuManagerScreen() {
           subtitle="Segundo servicio del día"
           icon="food-variant"
           selected={selectedService === 'lunch'}
-          onPress={() =>
-            setSelectedService('lunch')
-          }
+          onPress={() => handleSelectService('lunch')}
         />
 
         <View style={styles.dishesHeader}>
@@ -848,44 +953,72 @@ export default function WeeklyMenuManagerScreen() {
             </Text>
 
             <Text style={styles.adviceText}>
-              Escribe nombres y descripciones claras para que los empleados puedan elegir fácilmente.
+              Guarda cada combinación de día y servicio antes de cambiarla. Después publica la semana completa.
             </Text>
           </View>
         </View>
 
         <TouchableOpacity
           activeOpacity={0.85}
+          disabled={
+            !hasChanges ||
+            isLoading ||
+            isSaving
+          }
           style={[
             styles.saveButton,
-            !hasChanges &&
+            (!hasChanges || isLoading || isSaving) &&
               styles.saveButtonDisabled,
           ]}
           onPress={handleSave}
         >
           <MaterialCommunityIcons
-            name="content-save-outline"
+            name={
+              isSaving
+                ? 'progress-clock'
+                : 'content-save-outline'
+            }
             size={24}
             color={COLORS.white}
           />
 
           <Text style={styles.saveButtonText}>
-            Guardar cambios
+            {isSaving
+              ? 'Guardando...'
+              : 'Guardar cambios'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           activeOpacity={0.85}
-          style={styles.publishButton}
+          disabled={
+            isLoading ||
+            isSaving ||
+            isPublishing
+          }
+          style={[
+            styles.publishButton,
+            (isLoading ||
+              isSaving ||
+              isPublishing) &&
+              styles.saveButtonDisabled,
+          ]}
           onPress={handlePublishMenu}
         >
           <MaterialCommunityIcons
-            name="send-check-outline"
+            name={
+              isPublishing
+                ? 'progress-clock'
+                : 'send-check-outline'
+            }
             size={24}
             color={COLORS.primary}
           />
 
           <Text style={styles.publishButtonText}>
-            Publicar menú semanal
+            {isPublishing
+              ? 'Publicando...'
+              : 'Publicar menú semanal'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
