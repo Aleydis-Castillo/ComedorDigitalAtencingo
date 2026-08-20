@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  EMPLOYEE
+  PRACTITIONER
+  MANAGER
+  COMEDOR
+  EXTERNAL
+}
+
+enum ServiceType {
+  BREAKFAST
+  LUNCH
+}
+
+enum DeliveryType {
+  CAFETERIA
+  OFFICE
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum SignatureType {
+  BIOMETRIC
+  DRAWN
+}
+
+enum EventStatus {
+  SCHEDULED
+  ACTIVE
+  FINISHED
+  CANCELLED
+}
+
+enum ReportGroup {
+  EXTERNAL_PERSONNEL
+  FACTORY_SUGAR_WAREHOUSE
+  ADMINISTRATION_FIELD
+  CORPORATE_PERSONNEL
+  PRACTITIONERS
+  FACTORY_LABORATORY
+  HR_SAFETY_TRAINING
+}
+
+enum ExternalPersonnelType {
+  VISIT
+  SCHEDULED
+  OTHER_MILL
+}
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+
+  employeeNumber String?  @unique
+  name           String
+  passwordHash   String
+  role           UserRole
+  department     String?
+  active         Boolean  @default(true)
+
+  reportGroup  ReportGroup?
+  workLocation String?
+  externalType ExternalPersonnelType?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  practitionerProfile PractitionerProfile?
+  externalProfile     ExternalPersonnelProfile?
+
+  orders        Order[]
+  createdEvents Event[]
+
+  @@index([role])
+  @@index([active])
+  @@index([reportGroup])
+  @@map("users")
+}
+
+model PractitionerProfile {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @unique @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessCode String   @unique
+  startDate  DateTime @db.Date
+  endDate    DateTime @db.Date
+  active     Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accessCode])
+  @@index([endDate])
+  @@index([active])
+  @@map("practitioner_profiles")
+}
+
+model ExternalPersonnelProfile {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @unique @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessCode String @unique
+
+  type ExternalPersonnelType
+
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accessCode])
+  @@index([type])
+  @@index([endDate])
+  @@index([active])
+  @@map("external_personnel_profiles")
+}
+
+model MenuDay {
+  id String @id @default(uuid()) @db.Uuid
+
+  date      DateTime @unique @db.Date
+  published Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dishes Dish[]
+
+  @@index([date])
+  @@index([published])
+  @@map("menu_days")
+}
+
+model Dish {
+  id String @id @default(uuid()) @db.Uuid
+
+  menuDayId String  @db.Uuid
+  menuDay   MenuDay @relation(fields: [menuDayId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?     @db.Text
+  service     ServiceType
+  available   Boolean     @default(true)
+  position    Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+
+  @@unique([menuDayId, service, position])
+  @@index([menuDayId, service])
+  @@index([available])
+  @@map("dishes")
+}
+
+model Order {
+  id String @id @default(uuid()) @db.Uuid
+
+  folio String @unique
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  dishId String @db.Uuid
+  dish   Dish   @relation(fields: [dishId], references: [id], onDelete: Restrict)
+
+  service      ServiceType
+  deliveryType DeliveryType
+
+  zone         String?
+  location     String?
+  observations String? @db.Text
+
+  status OrderStatus @default(PENDING)
+
+  orderedFor  DateTime  @db.Date
+  deliveredAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  signature OrderSignature?
+
+  @@index([userId])
+  @@index([dishId])
+  @@index([status])
+  @@index([orderedFor])
+  @@index([service, orderedFor])
+  @@map("orders")
+}
+
+model OrderSignature {
+  id String @id @default(uuid()) @db.Uuid
+
+  orderId String @unique @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  type          SignatureType
+  signatureData String?       @db.Text
+  signedAt      DateTime      @default(now())
+
+  @@index([signedAt])
+  @@map("order_signatures")
+}
+
+model Event {
+  id String @id @default(uuid()) @db.Uuid
+
+  title        String
+  eventDate    DateTime    @db.Date
+  eventTime    DateTime    @db.Time(0)
+  service      ServiceType
+  people       Int
+  location     String
+  observations String?     @db.Text
+  status       EventStatus @default(SCHEDULED)
+
+  createdById String @db.Uuid
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventDate])
+  @@index([status])
+  @@index([createdById])
+  @@map("events")
+}

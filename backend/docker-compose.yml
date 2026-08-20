@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: comedor_postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: comedor
+      POSTGRES_PASSWORD: comedor_password
+      POSTGRES_DB: comedor_digital_atencingo
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U comedor -d comedor_digital_atencingo"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: comedor_backend
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      DATABASE_URL: postgresql://comedor:comedor_password@postgres:5432/comedor_digital_atencingo?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      PORT: 3000
+      NODE_ENV: production
+
+    ports:
+      - "3000:3000"
+
+    command: >
+      sh -c "
+      npx prisma migrate deploy &&
+      npm start
+      "
+
+volumes:
+  postgres_data:
